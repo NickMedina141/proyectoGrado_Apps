@@ -163,20 +163,22 @@ class SalaSupervision(QWidget):
             alumnos_unicos = set(it["estudianteId"] for it in items)
             cant_alumnos = len(alumnos_unicos)
 
+            # Comprobar si al menos una sesión en este cluster sigue en curso
+            tiene_en_curso = any(str(it.get("estado", "")).upper() == "EN_CURSO" for it in items)
+
             if cant_alumnos >= 4:
                 categoria = "AULA_PRESENCIAL"
                 color = "morado"
             elif cant_alumnos in (2, 3):
                 categoria = "PROXIMIDAD_SOSPECHOSA"
-                color = "morado"
+                color = "rojo" if tiene_en_curso else "morado"
             else:
-                it = items[0]
-                if it["esActual"]:
+                if tiene_en_curso:
                     categoria = "ACTUAL"
                     color = "verde"
                 else:
                     categoria = "HISTORICO"
-                    color = "naranja"
+                    color = "azul"
 
             pines.append({
                 "lat": cl["lat_centro"],
@@ -184,6 +186,7 @@ class SalaSupervision(QWidget):
                 "categoria": categoria,
                 "color": color,
                 "cantidadAlumnos": cant_alumnos,
+                "tieneEnCurso": tiene_en_curso,
                 "items": items
             })
 
@@ -236,7 +239,7 @@ class SalaSupervision(QWidget):
         btn_cerrar.clicked.connect(self.cerrar_mapa)
         lay_barra.addWidget(btn_cerrar)
 
-        titulo = QLabel("Mapa Forense de Supervisión GPS (Trazabilidad e Intentos)")
+        titulo = QLabel("Mapa Histórico de Supervisión GPS (Trazabilidad e Intentos)")
         titulo.setStyleSheet(
             "QLabel { color: white; font-size: 16px; font-weight: bold; background-color: transparent; }")
         titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
