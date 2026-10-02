@@ -43,27 +43,163 @@ class SalaSupervision(QWidget):
         self.estado_estudiantes = {}
         self.sesiones_activas_ids = set()
 
+    def _calcular_distancia_haversine(self, lat1, lon1, lat2, lon2):
+        import math
+        try:
+            r = 6371.0  # Radio de la Tierra en km
+            dlat = math.radians(float(lat2) - float(lat1))
+            dlon = math.radians(float(lon2) - float(lon1))
+            a = math.sin(dlat / 2)**2 + math.cos(math.radians(float(lat1))) * math.cos(math.radians(float(lat2))) * math.sin(dlon / 2)**2
+            c = 2 * math.asin(math.sqrt(a))
+            return round(r * c, 2)
+        except Exception:
+            return 0.0
+
+    def _procesar_datos_mapa(self, datos):
+        if not datos or not isinstance(datos, list):
+            return {"pines": []}
+
+        # 1. Agrupar sesiones validas por estudiante
+        estudiantes_sesiones = {}
+        for s in datos:
+            nom = s.get("nombreEstudiante") or "Desconocido"
+            est_id = str(s.get("estudianteId") or nom)
+            conexion = s.get("conexion") or {}
+            if not isinstance(conexion, dict):
+                continue
+            lat = conexion.get("latitud")
+            lon = conexion.get("longitud")
+
+            if lat is None or lon is None:
+                continue
+            try:
+                lat = float(lat)
+                lon = float(lon)
+            except (ValueError, TypeError):
+                continue
+
+            if lat == 0.0 and lon == 0.0:
+                continue
+
+            if est_id not in estudiantes_sesiones:
+                estudiantes_sesiones[est_id] = []
+
+            estudiantes_sesiones[est_id].append({
+                "sesionId": s.get("sesionId") or s.get("id", ""),
+                "nombre": nom,
+                "estudianteId": est_id,
+                "estadoSesion": s.get("estadoSesion", "EN_CURSO"),
+                "ip": conexion.get("ipEstudiante", "N/A"),
+                "lat": lat,
+                "lon": lon,
+                "inicio": str(s.get("inicioSesion") or s.get("horaInicio") or s.get("fechaCreacion") or "")
+            })
+
+        # 2. Orden cronológico de intentos y cálculo de trazabilidad por estudiante
+        todos_los_intentos = []
+        for est_id, s_list in estudiantes_sesiones.items():
+            s_list.sort(key=lambda x: x.get("inicio", ""))
+            total_intentos = len(s_list)
+
+            trayectoria = []
+            for i, ses in enumerate(s_list):
+                trayectoria.append({
+                    "intento": i + 1,
+                    "lat": ses["lat"],
+                    "lon": ses["lon"],
+                    "ip": ses["ip"],
+                    "estado": ses["estadoSesion"],
+                    "fecha": ses["inicio"]
+                })
+
+            distancia_total = 0.0
+            if total_intentos > 1:
+                distancia_total = self._calcular_distancia_haversine(
+                    s_list[0]["lat"], s_list[0]["lon"],
+                    s_list[-1]["lat"], s_list[-1]["lon"]
+                )
+
+            for i, ses in enumerate(s_list):
+                intento_num = i + 1
+                es_actual = (i == total_intentos - 1)
+                todos_los_intentos.append({
+                    "sesionId": ses["sesionId"],
+                    "estudianteId": est_id,
+                    "nombre": ses["nombre"],
+                    "intento": intento_num,
+                    "totalIntentos": total_intentos,
+                    "esActual": es_actual,
+                    "estado": ses["estadoSesion"],
+                    "ip": ses["ip"],
+                    "lat": ses["lat"],
+                    "lon": ses["lon"],
+                    "distanciaDesplazamientoKm": distancia_total,
+                    "trayectoria": trayectoria if total_intentos > 1 else []
+                })
+
+        # 3. Agrupación por proximidad geográfica (Clusters <= 50 metros)
+        clusters = []
+        for item in todos_los_intentos:
+            asignado = False
+            for cl in clusters:
+                d = self._calcular_distancia_haversine(
+                    item["lat"], item["lon"], cl["lat_centro"], cl["lon_centro"]
+                )
+                if d <= 0.05:  # Menor o igual a 50 metros
+                    cl["items"].append(item)
+                    asignado = True
+                    break
+            if not asignado:
+                clusters.append({
+                    "lat_centro": item["lat"],
+                    "lon_centro": item["lon"],
+                    "items": [item]
+                })
+
+        # 4. Clasificación de categorías para pines
+        pines = []
+        for cl in clusters:
+            items = cl["items"]
+            alumnos_unicos = set(it["estudianteId"] for it in items)
+            cant_alumnos = len(alumnos_unicos)
+
+            if cant_alumnos >= 4:
+                categoria = "AULA_PRESENCIAL"
+                color = "morado"
+            elif cant_alumnos in (2, 3):
+                categoria = "PROXIMIDAD_SOSPECHOSA"
+                color = "morado"
+            else:
+                it = items[0]
+                if it["esActual"]:
+                    categoria = "ACTUAL"
+                    color = "verde"
+                else:
+                    categoria = "HISTORICO"
+                    color = "naranja"
+
+            pines.append({
+                "lat": cl["lat_centro"],
+                "lon": cl["lon_centro"],
+                "categoria": categoria,
+                "color": color,
+                "cantidadAlumnos": cant_alumnos,
+                "items": items
+            })
+
+        return {"pines": pines}
+
     def actualizar_pines_mapa(self):
         if not self.codigo_examen_actual or not hasattr(self, 'vista_mapa'):
             return
         from api.cliente_respuesta import cliente_api
         exito, datos = cliente_api.obtener_sesiones_examen(
             self.codigo_examen_actual, todas=True)
-        estudiantes_dict = {}
         if exito and isinstance(datos, list):
-            for s in datos:
-                nombre = s.get("nombreEstudiante", "Desconocido")
-                conexion = s.get("conexion", {})
-                if conexion:
-                    lat = conexion.get("latitud")
-                    lon = conexion.get("longitud")
-                    if lat is not None and lon is not None and lat != 0.0 and lon != 0.0:
-                        estudiantes_dict[nombre] = {
-                            "nombre": nombre, "lat": lat, "lon": lon}
-        estudiantes_gps = list(estudiantes_dict.values())
-        import json
-        json_est = json.dumps(estudiantes_gps)
-        self.vista_mapa.page().runJavaScript(f"cargarPines({json_est});")
+            datos_mapa = self._procesar_datos_mapa(datos)
+            import json
+            json_pines = json.dumps(datos_mapa)
+            self.vista_mapa.page().runJavaScript(f"cargarPines({json_pines});")
 
     def cerrar_mapa(self):
         self.timer_mapa.stop()
@@ -82,18 +218,7 @@ class SalaSupervision(QWidget):
         from api.cliente_respuesta import cliente_api
         exito, datos = cliente_api.obtener_sesiones_examen(
             self.codigo_examen_actual, todas=True)
-        estudiantes_dict = {}
-        if exito and isinstance(datos, list):
-            for s in datos:
-                nombre = s.get("nombreEstudiante", "Desconocido")
-                conexion = s.get("conexion", {})
-                if conexion:
-                    lat = conexion.get("latitud")
-                    lon = conexion.get("longitud")
-                    if lat is not None and lon is not None and lat != 0.0 and lon != 0.0:
-                        estudiantes_dict[nombre] = {
-                            "nombre": nombre, "lat": lat, "lon": lon}
-        estudiantes_gps = list(estudiantes_dict.values())
+        datos_mapa = self._procesar_datos_mapa(datos) if (exito and isinstance(datos, list)) else {"pines": []}
 
         self.cerrar_mapa()
 
@@ -103,7 +228,7 @@ class SalaSupervision(QWidget):
         lay_barra = QHBoxLayout()
         lay_barra.setContentsMargins(15, 0, 15, 0)
 
-        btn_cerrar = QPushButton("← Regresar a la supervision")
+        btn_cerrar = QPushButton("← Regresar a la supervisión")
         btn_cerrar.setStyleSheet(
             "QPushButton { background-color: transparent; color: #E74C3C; font-weight: bold; font-size: 14px; border: none; } QPushButton:hover { color: #ff6b6b; }")
         from PyQt6.QtCore import Qt
@@ -111,7 +236,7 @@ class SalaSupervision(QWidget):
         btn_cerrar.clicked.connect(self.cerrar_mapa)
         lay_barra.addWidget(btn_cerrar)
 
-        titulo = QLabel("Mapa de Estudiantes Histórico")
+        titulo = QLabel("Mapa Forense de Supervisión GPS (Trazabilidad e Intentos)")
         titulo.setStyleSheet(
             "QLabel { color: white; font-size: 16px; font-weight: bold; background-color: transparent; }")
         titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -133,9 +258,9 @@ class SalaSupervision(QWidget):
         self.layout_mapa.addWidget(self.vista_mapa)
 
         import json
-        json_est = json.dumps(estudiantes_gps)
+        json_pines = json.dumps(datos_mapa)
         self.vista_mapa.loadFinished.connect(
-            lambda: self.vista_mapa.page().runJavaScript(f"cargarPines({json_est});"))
+            lambda: self.vista_mapa.page().runJavaScript(f"cargarPines({json_pines});"))
 
         self.frame_central.setVisible(False)
         self.frame_feed_alertas.setVisible(False)

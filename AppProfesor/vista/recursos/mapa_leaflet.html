@@ -1,8 +1,8 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="es">
 <head>
-    <title>Mapa de Estudiantes</title>
     <meta charset="utf-8" />
+    <title>Mapa de Supervisión GPS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -13,7 +13,8 @@
             height: 100%;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: #f4f6f9;
         }
         #map {
             position: absolute;
@@ -24,23 +25,200 @@
             width: 100%;
             height: 100%;
         }
+        .custom-pin {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .pin-svg {
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.38));
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .pin-svg:hover {
+            transform: scale(1.18);
+        }
+        
+        /* Popup Styling */
         .leaflet-popup-content-wrapper {
-            border-radius: 8px;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+            padding: 0;
+            overflow: hidden;
         }
         .leaflet-popup-content {
-            font-weight: bold;
-            font-size: 14px;
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.4;
             color: #2c3e50;
+            min-width: 270px;
+            max-width: 330px;
+        }
+        .popup-header {
+            padding: 10px 14px;
+            color: white;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .popup-header.verde { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .popup-header.naranja { background: linear-gradient(135deg, #d35400, #e67e22); }
+        .popup-header.morado { background: linear-gradient(135deg, #6c3483, #8e44ad); }
+        .popup-header.alerta { background: linear-gradient(135deg, #922b21, #c0392b); }
+
+        .popup-body {
+            padding: 12px 14px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .student-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .student-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .student-name {
+            font-weight: 700;
+            font-size: 13.5px;
+            color: #1a252f;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .student-meta {
+            font-size: 11.5px;
+            color: #566573;
+            margin-top: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-activo { background-color: #e8f8f5; color: #27ae60; border: 1px solid #a3e4d7; }
+        .badge-historico { background-color: #fef5e7; color: #d35400; border: 1px solid #f8c471; }
+        .badge-ip { background-color: #ebf5fb; color: #2980b9; border: 1px solid #aed6f1; }
+        
+        .trajectory-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            padding: 6px 10px;
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .trajectory-btn:hover {
+            background-color: #1f618d;
+        }
+
+        /* Floating Legend */
+        .map-legend {
+            position: absolute;
+            bottom: 25px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 10px 14px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.18);
+            font-size: 12px;
+            z-index: 1000;
+            color: #2c3e50;
+            max-width: 260px;
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+        .legend-title {
+            font-weight: 700;
+            font-size: 12.5px;
+            margin-bottom: 7px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #1a252f;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .dot-verde { background-color: #27ae60; box-shadow: 0 0 5px rgba(39,174,96,0.6); }
+        .dot-naranja { background-color: #e67e22; box-shadow: 0 0 5px rgba(230,126,34,0.6); }
+        .dot-morado { background-color: #8e44ad; box-shadow: 0 0 5px rgba(142,68,173,0.6); }
+        .dot-rojo { background-color: #c0392b; box-shadow: 0 0 5px rgba(192,57,43,0.6); }
+
+        .legend-tip {
+            font-size: 11px;
+            color: #7f8c8d;
+            margin-top: 6px;
+            line-height: 1.3;
+            border-top: 1px dashed #e0e0e0;
+            padding-top: 5px;
+        }
+
+        /* Trajectory Label Tooltip */
+        .trajectory-popup .leaflet-popup-content-wrapper {
+            background-color: #2c3e50;
+            color: #ffffff;
+            border-radius: 6px;
+            padding: 2px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .trajectory-popup .leaflet-popup-content {
+            margin: 6px 10px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+        .trajectory-popup .leaflet-popup-tip {
+            background-color: #2c3e50;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
+
+    <div class="map-legend">
+        <div class="legend-title">🗺️ Monitoreo Forense GPS</div>
+        <div class="legend-item"><span class="legend-dot dot-verde"></span> 🟢 En curso (Intento actual)</div>
+        <div class="legend-item"><span class="legend-dot dot-naranja"></span> 🟠 Intento previo (Historial)</div>
+        <div class="legend-item"><span class="legend-dot dot-morado"></span> 🟣 Aula Presencial (≥ 4 alumnos)</div>
+        <div class="legend-item"><span class="legend-dot dot-rojo"></span> 🔴 Alerta Proximidad (2-3 alumnos)</div>
+        <div class="legend-tip">💡 <i>Haz clic en un alumno con reintentos para trazar su línea de desplazamiento.</i></div>
+    </div>
+
     <script>
         // Inicializar mapa centrado en Colombia
-        var map = L.map('map').setView([4.5709, -74.2973], 6);
+        var map = L.map('map', {
+            zoomControl: true,
+            minZoom: 2
+        }).setView([4.5709, -74.2973], 6);
 
-        // Capa de OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
@@ -48,36 +226,232 @@
 
         var markers = [];
         var haCentrado = false;
-        
-        var redIcon = new L.Icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
+        var lineaTrayectoriaActiva = null;
+        var etiquetaTrayectoriaActiva = null;
+
+        // Limpiar trazabilidad al hacer clic en cualquier parte vacía del mapa
+        map.on('click', function(e) {
+            if (!e.originalEvent || !e.originalEvent._handledByMarker) {
+                limpiarTrayectoria();
+            }
         });
 
-        // Funci&oacute;n llamada desde PyQt para cargar estudiantes
+        function limpiarTrayectoria() {
+            if (lineaTrayectoriaActiva) {
+                map.removeLayer(lineaTrayectoriaActiva);
+                lineaTrayectoriaActiva = null;
+            }
+            if (etiquetaTrayectoriaActiva) {
+                map.removeLayer(etiquetaTrayectoriaActiva);
+                etiquetaTrayectoriaActiva = null;
+            }
+        }
+
+        function trazarRuta(trayectoriaJsonStr, distanciaKm, nombreEstudiante) {
+            limpiarTrayectoria();
+            try {
+                var puntos = (typeof trayectoriaJsonStr === 'string') ? JSON.parse(trayectoriaJsonStr) : trayectoriaJsonStr;
+                if (!puntos || puntos.length < 2) return;
+
+                var coords = puntos.map(function(p) { return [p.lat, p.lon]; });
+
+                lineaTrayectoriaActiva = L.polyline(coords, {
+                    color: '#2980b9',
+                    weight: 4,
+                    opacity: 0.9,
+                    dashArray: '8, 8',
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(map);
+
+                // Calcular punto medio para el indicador flotante
+                var midLat = (coords[0][0] + coords[coords.length - 1][0]) / 2;
+                var midLon = (coords[0][1] + coords[coords.length - 1][1]) / 2;
+
+                var textoDistancia = distanciaKm > 0 ? (distanciaKm + " km") : "Misma zona";
+                etiquetaTrayectoriaActiva = L.popup({
+                    closeButton: true,
+                    autoClose: false,
+                    className: 'trajectory-popup',
+                    offset: [0, -10]
+                })
+                .setLatLng([midLat, midLon])
+                .setContent("📍 <b>" + nombreEstudiante + "</b><br>Desplazamiento: <b>" + textoDistancia + "</b> entre intentos")
+                .openOn(map);
+
+                // Ajustar vista para abarcar ambos puntos de la ruta
+                map.fitBounds(L.latLngBounds(coords).pad(0.3));
+            } catch(e) {
+                console.error("Error al trazar ruta:", e);
+            }
+        }
+
+        function crearPinSVG(colorHex, badgeText, iconoTipo) {
+            var iconoInterno = '';
+            if (badgeText) {
+                iconoInterno = '<text x="18" y="20" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"12\" font-weight=\"900\" fill=\"' + colorHex + '\" text-anchor=\"middle\" dominant-baseline=\"central\">' + badgeText + '</text>';
+            } else if (iconoTipo === 'reintento') {
+                iconoInterno = '<circle cx="18" cy="18" r="6" stroke="' + colorHex + '" stroke-width="2" fill="none"/>' +
+                               '<polyline points="18,14 18,18 21,18" stroke="' + colorHex + '" stroke-width="2" fill="none" stroke-linecap="round"/>';
+            } else if (iconoTipo === 'alerta') {
+                iconoInterno = '<text x="18" y="19" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"14\" font-weight=\"900\" fill=\"' + colorHex + '\" text-anchor=\"middle\" dominant-baseline=\"central\">!</text>';
+            } else {
+                iconoInterno = '<circle cx="18" cy="15" r="3.5" fill="' + colorHex + '"/>' +
+                               '<path d="M12 23 C12 20, 15 19, 18 19 C21 19, 24 20, 24 23" fill="' + colorHex + '"/>';
+            }
+
+            var svg = '<svg class="pin-svg" width="36" height="46" viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                      '<path d="M18 0C8.06 0 0 8.06 0 18C0 28.5 18 46 18 46C18 46 36 28.5 36 18C36 8.06 27.94 0 18 0Z" fill="' + colorHex + '"/>' +
+                      '<circle cx="18" cy="18" r="11" fill="#FFFFFF"/>' +
+                      iconoInterno +
+                      '</svg>';
+
+            return L.divIcon({
+                className: 'custom-pin',
+                html: svg,
+                iconSize: [36, 46],
+                iconAnchor: [18, 46],
+                popupAnchor: [0, -42]
+            });
+        }
+
+        function generarContenidoPopup(pin) {
+            var cat = pin.categoria;
+            var items = pin.items || [];
+            var colorClase = 'verde';
+            var tituloHeader = 'Estudiante en Curso';
+            var iconoHeader = '🟢';
+
+            if (cat === 'AULA_PRESENCIAL') {
+                colorClase = 'morado';
+                tituloHeader = 'Aula Presencial (' + pin.cantidadAlumnos + ' alumnos)';
+                iconoHeader = '🏫';
+            } else if (cat === 'PROXIMIDAD_SOSPECHOSA') {
+                colorClase = 'alerta';
+                tituloHeader = 'Alerta: Misma Ubicación (' + pin.cantidadAlumnos + ')';
+                iconoHeader = '⚠️';
+            } else if (cat === 'HISTORICO') {
+                colorClase = 'naranja';
+                tituloHeader = 'Intento Previo (Histórico)';
+                iconoHeader = '🟠';
+            }
+
+            var html = '<div class="popup-header ' + colorClase + '">' +
+                       '<span>' + iconoHeader + ' ' + tituloHeader + '</span>' +
+                       '</div><div class="popup-body">';
+
+            if (cat === 'PROXIMIDAD_SOSPECHOSA') {
+                html += '<div style="font-size:11px; background:#fadbd8; color:#78281f; padding:5px 8px; border-radius:4px; margin-bottom:8px;">' +
+                        '<b>Sospecha Forense:</b> Alumnos coinciden exactamente en coordenadas geográficas e IP.</div>';
+            }
+
+            items.forEach(function(item) {
+                var badgeEstado = item.esActual ?
+                    '<span class="badge badge-activo">En Curso</span>' :
+                    '<span class="badge badge-historico">Finalizado</span>';
+
+                var badgeIntento = '<span class="badge badge-ip">Intento ' + item.intento + '/' + item.totalIntentos + '</span>';
+
+                html += '<div class="student-item">' +
+                        '<div class="student-name">' +
+                        '<span>' + item.nombre + '</span>' +
+                        badgeIntento +
+                        '</div>' +
+                        '<div class="student-meta">' +
+                        badgeEstado +
+                        '<span class="badge badge-ip">IP: ' + (item.ip || 'Desconocida') + '</span>' +
+                        '</div>';
+
+                if (item.trayectoria && item.trayectoria.length > 1 && item.distanciaDesplazamientoKm > 0) {
+                    var safeTrayectoria = JSON.stringify(item.trayectoria).replace(/"/g, '&quot;');
+                    html += '<button class="trajectory-btn" onclick="trazarRuta(\'' + safeTrayectoria + '\', ' + item.distanciaDesplazamientoKm + ', \'' + item.nombre.replace(/'/g, "\\'") + '\')">' +
+                            '↔ Ver Desplazamiento (' + item.distanciaDesplazamientoKm + ' km)</button>';
+                }
+
+                html += '</div>';
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        // Función invocada desde PyQt para cargar los pines
         function cargarPines(data) {
-            // Limpiar pines anteriores
             markers.forEach(function(m) {
                 map.removeLayer(m);
             });
             markers = [];
-            
-            if (data.length === 0) return;
+
+            var listaPines = [];
+            if (Array.isArray(data)) {
+                if (data.length > 0 && data[0].categoria) {
+                    listaPines = data;
+                } else {
+                    listaPines = data.map(function(e) {
+                        return {
+                            lat: e.lat,
+                            lon: e.lon,
+                            categoria: 'ACTUAL',
+                            color: 'verde',
+                            cantidadAlumnos: 1,
+                            items: [{
+                                nombre: e.nombre,
+                                intento: 1,
+                                totalIntentos: 1,
+                                esActual: true,
+                                ip: 'N/A'
+                            }]
+                        };
+                    });
+                }
+            } else if (data && Array.isArray(data.pines)) {
+                listaPines = data.pines;
+            }
+
+            if (listaPines.length === 0) return;
 
             var group = new L.featureGroup();
 
-            data.forEach(function(est) {
-                if (est.lat && est.lon) {
-                    var m = L.marker([est.lat, est.lon], {icon: redIcon}).addTo(map)
-                        .bindPopup("<b>" + est.nombre + "</b>");
-                    m.on('click', function(e) { map.setView(e.latlng, 15); });
-                    markers.push(m);
-                    group.addLayer(m);
+            listaPines.forEach(function(pin) {
+                if (!pin.lat || !pin.lon) return;
+
+                var colorHex = '#27AE60';
+                var badgeText = null;
+                var iconoTipo = 'usuario';
+
+                if (pin.categoria === 'AULA_PRESENCIAL') {
+                    colorHex = '#8E44AD';
+                    badgeText = pin.cantidadAlumnos > 99 ? '99+' : pin.cantidadAlumnos.toString();
+                    iconoTipo = null;
+                } else if (pin.categoria === 'PROXIMIDAD_SOSPECHOSA') {
+                    colorHex = '#C0392B';
+                    badgeText = pin.cantidadAlumnos.toString();
+                    iconoTipo = 'alerta';
+                } else if (pin.categoria === 'HISTORICO') {
+                    colorHex = '#E67E22';
+                    iconoTipo = 'reintento';
                 }
+
+                var icon = crearPinSVG(colorHex, badgeText, iconoTipo);
+                var m = L.marker([pin.lat, pin.lon], { icon: icon }).addTo(map);
+
+                var contenidoPopup = generarContenidoPopup(pin);
+                m.bindPopup(contenidoPopup);
+
+                m.on('click', function(e) {
+                    if (e.originalEvent) {
+                        e.originalEvent._handledByMarker = true;
+                    }
+                    if (pin.items && pin.items.length === 1) {
+                        var it = pin.items[0];
+                        if (it.trayectoria && it.trayectoria.length > 1 && it.distanciaDesplazamientoKm > 0) {
+                            trazarRuta(it.trayectoria, it.distanciaDesplazamientoKm, it.nombre);
+                        }
+                    }
+                });
+
+                markers.push(m);
+                group.addLayer(m);
             });
 
             if (markers.length > 0 && !haCentrado) {
