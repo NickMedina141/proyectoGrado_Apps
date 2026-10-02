@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SalaSupervision</class>
+ <widget class="QWidget" name="SalaSupervision">
+ <property name="geometry">
+  <rect>
+  <x>0</x>
+  <y>0</y>
+  <width>900</width>
+  <height>700</height>
+  </rect>
+ </property>
+ 
+ <layout class="QHBoxLayout" name="layout_global">
+  <property name="spacing"><number>0</number></property>
+  <property name="leftMargin"><number>0</number></property>
+  <property name="topMargin"><number>0</number></property>
+  <property name="rightMargin"><number>0</number></property>
+  <property name="bottomMargin"><number>0</number></property>
+
+  <!-- ÁREA CENTRAL (GRUPOS) -->
+  <item>
+  <widget class="QFrame" name="frame_central">
+   <layout class="QVBoxLayout" name="layout_sala_principal">
+   <property name="leftMargin"><number>40</number></property>
+   <property name="topMargin"><number>40</number></property>
+   <property name="rightMargin"><number>40</number></property>
+   <property name="bottomMargin"><number>40</number></property>
+   <property name="spacing"><number>25</number></property>
+
+   <!-- CABECERA -->
+   <item>
+    <layout class="QHBoxLayout" name="layout_cabecera">
+    <item>
+     <layout class="QVBoxLayout" name="layout_titulos">
+     <property name="spacing"><number>8</number></property>
+     <item>
+      <widget class="QLabel" name="badge_envivo">
+      <property name="text"><string>EN VIVO</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="etiqueta_titulo">
+      <property name="text"><string>Monitoreo de Estudiantes: Cálculo Diferencial</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>20</pointsize><bold>true</bold></font></property>
+      <property name="wordWrap"><bool>true</bool></property>
+      </widget>
+     </item>
+     </layout>
+    </item>
+    <item>
+     <spacer name="spacer_cabecera">
+     <property name="orientation"><enum>Qt::Horizontal</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="boton_mapa">
+     <property name="text"><string>🗺️ Ver Mapa</string></property>
+     <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+     <property name="minimumSize"><size><width>140</width><height>45</height></size></property>
+     <property name="styleSheet"><string>QPushButton { background-color: #2980b9; color: white; border-radius: 5px; font-weight: bold; } QPushButton:hover { background-color: #3498db; }</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="boton_finalizar">
+     <property name="text"><string>Finalizar Examen</string></property>
+     <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+     <property name="minimumSize"><size><width>160</width><height>45</height></size></property>
+     </widget>
+    </item>
+    </layout>
+   </item>
+
+   <!-- TARJETAS DE ESTUDIANTES -->
+   <item>
+    <widget class="QScrollArea" name="area_scroll_grupos">
+    <property name="widgetResizable"><bool>true</bool></property>
+    <widget class="QWidget" name="contenido_grupos">
+     <layout class="QHBoxLayout" name="layout_grupos">
+     <property name="spacing"><number>20</number></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignTop</set></property>
+     </layout>
+    </widget>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QLabel" name="etiqueta_vacia">
+    <property name="text"><string>Actualmente no se esta supervisando nada</string></property>
+    <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><italic>true</italic></font></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <property name="styleSheet"><string>color: #7F8C8D;</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <spacer name="spacer_abajo">
+    <property name="orientation"><enum>Qt::Vertical</enum></property>
+    <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+    </spacer>
+   </item>
+
+   </layout>
+  </widget>
+  </item>
+
+  <!-- FEED DE ALERTAS (RIGHT SIDEBAR) -->
+  <item>
+  <widget class="QFrame" name="frame_feed_alertas">
+   <property name="minimumSize"><size><width>320</width><height>0</height></size></property>
+   <property name="maximumSize"><size><width>320</width><height>16777215</height></size></property>
+   <layout class="QVBoxLayout" name="layout_feed_sidebar">
+   <property name="leftMargin"><number>20</number></property>
+   <property name="topMargin"><number>40</number></property>
+   <property name="rightMargin"><number>20</number></property>
+   <property name="bottomMargin"><number>20</number></property>
+   <property name="spacing"><number>20</number></property>
+
+   <item>
+    <layout class="QHBoxLayout">
+    <item>
+     <widget class="QLabel" name="titulo_feed">
+     <property name="text"><string>Feed de Alertas</string></property>
+     <property name="font"><font><family>Segoe UI</family><pointsize>14</pointsize><bold>true</bold></font></property>
+     </widget>
+    </item>
+    <item>
+     <spacer>
+     <property name="orientation"><enum>Qt::Horizontal</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QLabel" name="estado_feed">
+     <property name="text"><string>En vivo</string></property>
+     </widget>
+    </item>
+    </layout>
+   </item>
+
+   <item>
+    <widget class="QScrollArea" name="area_scroll_feed">
+    <property name="widgetResizable"><bool>true</bool></property>
+    <widget class="QWidget" name="contenido_feed">
+     <layout class="QVBoxLayout" name="layout_feed">
+     <property name="alignment"><set>Qt::AlignTop</set></property>
+     <property name="spacing"><number>15</number></property>
+     
+     </layout>
+    </widget>
+    </widget>
+   </item>
+   </layout>
+  </widget>
+  </item>
+
+ </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

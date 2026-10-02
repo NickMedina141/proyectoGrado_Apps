@@ -1,0 +1,641 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ReporteIA</class>
+ <widget class="QWidget" name="ReporteIA">
+ <property name="geometry">
+  <rect>
+  <x>0</x>
+  <y>0</y>
+  <width>1100</width>
+  <height>800</height>
+  </rect>
+ </property>
+ 
+ <layout class="QVBoxLayout" name="layout_principal">
+  <property name="spacing"><number>25</number></property>
+  <property name="leftMargin"><number>40</number></property>
+  <property name="topMargin"><number>40</number></property>
+  <property name="rightMargin"><number>40</number></property>
+  <property name="bottomMargin"><number>40</number></property>
+  <property name="alignment"><set>Qt::AlignTop</set></property>
+
+  <!-- CABECERA -->
+  <item>
+  <layout class="QHBoxLayout" name="layout_cabecera">
+   <item>
+   <layout class="QVBoxLayout">
+    <property name="spacing"><number>10</number></property>
+    <item>
+    <widget class="QLabel" name="lbl_titulo">
+     <property name="text"><string>Reporte de Inteligencia Artificial</string></property>
+     <property name="font"><font><family>Segoe UI</family><pointsize>26</pointsize><bold>true</bold></font></property>
+     <property name="wordWrap"><bool>true</bool></property>
+    </widget>
+    </item>
+    <item>
+    <layout class="QHBoxLayout" name="layout_seleccion_examen">
+     <item>
+     <widget class="QLabel" name="lbl_seleccionar_examen">
+      <property name="text"><string>Seleccionar Examen:</string></property>
+      
+     </widget>
+     </item>
+     <item>
+     <widget class="QComboBox" name="combo_examenes">
+      <property name="minimumSize"><size><width>350</width><height>35</height></size></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>11</pointsize></font></property>
+     </widget>
+     </item>
+     <item>
+     <spacer>
+      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+     </spacer>
+     </item>
+    </layout>
+    </item>
+   </layout>
+   </item>
+   <item>
+   <spacer>
+    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+    <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+   </spacer>
+   </item>
+   <item>
+   <widget class="QPushButton" name="btn_descargar_pdf">
+    <property name="text"><string>Descargar Reportes PDF</string></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="minimumSize"><size><width>200</width><height>45</height></size></property>
+   </widget>
+   </item>
+  </layout>
+  </item>
+
+  <!-- TARJETAS SUPERIORES -->
+  <item>
+  <layout class="QHBoxLayout" name="layout_tarjetas">
+   <property name="spacing"><number>20</number></property>
+   
+   <!-- TARJETA ROJA (Fraude Inminente) -->
+   <item>
+   <widget class="QFrame" name="tarjeta_top_roja">
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+    <layout class="QHBoxLayout">
+    <property name="leftMargin"><number>20</number></property>
+    <property name="topMargin"><number>20</number></property>
+    <property name="rightMargin"><number>20</number></property>
+    <property name="bottomMargin"><number>20</number></property>
+    <property name="spacing"><number>15</number></property>
+    <item>
+     <widget class="QLabel" name="icon_rojo">
+     <property name="minimumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="maximumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="text"><string>&lt;div align=&quot;center&quot;&gt;&lt;/div&gt;</string></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout">
+     <item>
+      <widget class="QLabel" name="val_top_rojo">
+      <property name="text"><string>4 Alumnos</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_top_rojo">
+      <property name="text"><string>Fraude Inminente</string></property>
+      </widget>
+     </item>
+     </layout>
+    </item>
+    </layout>
+   </widget>
+   </item>
+
+   <!-- TARJETA NARANJA (Comportamiento Sospechoso) -->
+   <item>
+   <widget class="QFrame" name="tarjeta_top_naranja">
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+    <layout class="QHBoxLayout">
+    <property name="leftMargin"><number>20</number></property>
+    <property name="topMargin"><number>20</number></property>
+    <property name="rightMargin"><number>20</number></property>
+    <property name="bottomMargin"><number>20</number></property>
+    <property name="spacing"><number>15</number></property>
+    <item>
+     <widget class="QLabel" name="icon_naranja">
+     <property name="minimumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="maximumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="text"><string>&lt;div align=&quot;center&quot;&gt;&lt;/div&gt;</string></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout">
+     <item>
+      <widget class="QLabel" name="val_top_naranja">
+      <property name="text"><string>12 Alumnos</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_top_naranja">
+      <property name="text"><string>Comportamiento Sospechoso</string></property>
+      </widget>
+     </item>
+     </layout>
+    </item>
+    </layout>
+   </widget>
+   </item>
+
+   <!-- TARJETA VERDE (Sin Anomalías) -->
+   <item>
+   <widget class="QFrame" name="tarjeta_top_verde">
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+    <layout class="QHBoxLayout">
+    <property name="leftMargin"><number>20</number></property>
+    <property name="topMargin"><number>20</number></property>
+    <property name="rightMargin"><number>20</number></property>
+    <property name="bottomMargin"><number>20</number></property>
+    <property name="spacing"><number>15</number></property>
+    <item>
+     <widget class="QLabel" name="icon_verde">
+     <property name="minimumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="maximumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="text"><string>&lt;div align=&quot;center&quot;&gt;&lt;/div&gt;</string></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout">
+     <item>
+      <widget class="QLabel" name="val_top_verde">
+      <property name="text"><string>28 Alumnos</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_top_verde">
+      <property name="text"><string>Sin Anomalías</string></property>
+      </widget>
+     </item>
+     </layout>
+    </item>
+    </layout>
+   </widget>
+   </item>
+  </layout>
+  </item>
+
+  <!-- TARJETAS ANALÍTICAS COMPLEMENTARIAS -->
+  <item>
+  <layout class="QHBoxLayout" name="layout_tarjetas_kpis">
+   <property name="spacing"><number>20</number></property>
+   
+   <!-- KPI 1: Total Evaluados -->
+   <item>
+   <widget class="QFrame" name="tarjeta_kpi_total">
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+    <layout class="QHBoxLayout">
+    <property name="leftMargin"><number>20</number></property>
+    <property name="topMargin"><number>20</number></property>
+    <property name="rightMargin"><number>20</number></property>
+    <property name="bottomMargin"><number>20</number></property>
+    <property name="spacing"><number>15</number></property>
+    <item>
+     <widget class="QLabel" name="icon_kpi_total">
+     <property name="minimumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="maximumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="text"><string>&lt;div align=&quot;center&quot;&gt;👥&lt;/div&gt;</string></property>
+     <property name="font"><font><pointsize>16</pointsize></font></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout">
+     <item>
+      <widget class="QLabel" name="val_kpi_total">
+      <property name="text"><string>0 Alumnos</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_kpi_total">
+      <property name="text"><string>Total Alumnos Evaluados</string></property>
+      </widget>
+     </item>
+     </layout>
+    </item>
+    </layout>
+   </widget>
+   </item>
+
+   <!-- KPI 2: Infracción Predominante -->
+   <item>
+   <widget class="QFrame" name="tarjeta_kpi_predominante">
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+    <layout class="QHBoxLayout">
+    <property name="leftMargin"><number>20</number></property>
+    <property name="topMargin"><number>20</number></property>
+    <property name="rightMargin"><number>20</number></property>
+    <property name="bottomMargin"><number>20</number></property>
+    <property name="spacing"><number>15</number></property>
+    <item>
+     <widget class="QLabel" name="icon_kpi_predominante">
+     <property name="minimumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="maximumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="text"><string>&lt;div align=&quot;center&quot;&gt;🎯&lt;/div&gt;</string></property>
+     <property name="font"><font><pointsize>16</pointsize></font></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout">
+     <item>
+      <widget class="QLabel" name="val_kpi_predominante">
+      <property name="text"><string>Ninguna (0%)</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_kpi_predominante">
+      <property name="text"><string>Infracción Predominante</string></property>
+      </widget>
+     </item>
+     </layout>
+    </item>
+    </layout>
+   </widget>
+   </item>
+
+   <!-- KPI 3: Transparencia Grupal -->
+   <item>
+   <widget class="QFrame" name="tarjeta_kpi_transparencia">
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+    <layout class="QHBoxLayout">
+    <property name="leftMargin"><number>20</number></property>
+    <property name="topMargin"><number>20</number></property>
+    <property name="rightMargin"><number>20</number></property>
+    <property name="bottomMargin"><number>20</number></property>
+    <property name="spacing"><number>15</number></property>
+    <item>
+     <widget class="QLabel" name="icon_kpi_transparencia">
+     <property name="minimumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="maximumSize"><size><width>50</width><height>50</height></size></property>
+     <property name="text"><string>&lt;div align=&quot;center&quot;&gt;🛡️&lt;/div&gt;</string></property>
+     <property name="font"><font><pointsize>16</pointsize></font></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout">
+     <item>
+      <widget class="QLabel" name="val_kpi_transparencia">
+      <property name="text"><string>100%</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_kpi_transparencia">
+      <property name="text"><string>Transparencia Grupal</string></property>
+      </widget>
+     </item>
+     </layout>
+    </item>
+    </layout>
+   </widget>
+   </item>
+
+  </layout>
+  </item>
+
+  <!-- PANELES INFERIORES -->
+  <item>
+  <layout class="QHBoxLayout" name="layout_paneles">
+   <property name="spacing"><number>20</number></property>
+   
+   <!-- PANEL IZQUIERDO: ANÁLISIS DE ANOMALÍAS -->
+   <item>
+    <widget class="QFrame" name="panel_analisis">
+     <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>1</horstretch><verstretch>0</verstretch></sizepolicy></property>
+     <property name="minimumSize"><size><width>0</width><height>350</height></size></property>
+     <layout class="QVBoxLayout">
+    <property name="spacing"><number>15</number></property>
+    <property name="leftMargin"><number>30</number></property>
+    <property name="topMargin"><number>30</number></property>
+    <property name="rightMargin"><number>30</number></property>
+    <property name="bottomMargin"><number>30</number></property>
+    <item>
+     <widget class="QLabel" name="titulo_analisis">
+     <property name="text"><string>Análisis de Anomalías</string></property>
+     <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+     </widget>
+    </item>
+    <!-- CUERPO ANÁLISIS (DONUT CHART + BARRAS) -->
+    <item>
+     <layout class="QHBoxLayout" name="layout_cuerpo_analisis">
+      <property name="spacing"><number>25</number></property>
+      
+      <!-- CONTENEDOR GRAFICO DONA -->
+      <item>
+       <widget class="QWidget" name="contenedor_dona">
+        <property name="sizePolicy"><sizepolicy hsizetype="Preferred" vsizetype="Preferred"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+        <property name="minimumSize"><size><width>250</width><height>210</height></size></property>
+       </widget>
+      </item>
+
+      <!-- BARRAS DE PROGRESO -->
+      <item>
+       <layout class="QVBoxLayout" name="layout_barras_progreso">
+        <property name="spacing"><number>10</number></property>
+        
+        <!-- ITEM 1 -->
+        <item>
+         <layout class="QVBoxLayout">
+         <property name="spacing"><number>5</number></property>
+         <item>
+          <layout class="QHBoxLayout">
+          <item><widget class="QLabel" name="lbl_an1"><property name="text"><string>Anomalías de Audio</string></property></widget></item>
+          <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+          <item><widget class="QLabel" name="val_an1"><property name="text"><string>45%</string></property><property name="font"><font><bold>true</bold></font></property></widget></item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="bar_an1">
+          <property name="value"><number>45</number></property>
+          <property name="textVisible"><bool>false</bool></property>
+          <property name="maximumHeight"><number>8</number></property>
+          </widget>
+         </item>
+         </layout>
+        </item>
+
+        <!-- ITEM 2 -->
+        <item>
+         <layout class="QVBoxLayout">
+         <property name="spacing"><number>5</number></property>
+         <item>
+          <layout class="QHBoxLayout">
+          <item><widget class="QLabel" name="lbl_an2"><property name="text"><string>Detección de Visión y Objetos</string></property></widget></item>
+          <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+          <item><widget class="QLabel" name="val_an2"><property name="text"><string>0%</string></property><property name="font"><font><bold>true</bold></font></property></widget></item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="bar_an2">
+          <property name="value"><number>0</number></property>
+          <property name="textVisible"><bool>false</bool></property>
+          <property name="maximumHeight"><number>8</number></property>
+          </widget>
+         </item>
+         </layout>
+        </item>
+
+        <!-- ITEM 3 -->
+        <item>
+         <layout class="QVBoxLayout">
+         <property name="spacing"><number>5</number></property>
+         <item>
+          <layout class="QHBoxLayout">
+          <item><widget class="QLabel" name="lbl_an3"><property name="text"><string>Procesos</string></property></widget></item>
+          <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+          <item><widget class="QLabel" name="val_an3"><property name="text"><string>0%</string></property><property name="font"><font><bold>true</bold></font></property></widget></item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="bar_an3">
+          <property name="value"><number>0</number></property>
+          <property name="textVisible"><bool>false</bool></property>
+          <property name="maximumHeight"><number>8</number></property>
+          </widget>
+         </item>
+         </layout>
+        </item>
+
+        <!-- ITEM 4 -->
+        <item>
+         <layout class="QVBoxLayout">
+         <property name="spacing"><number>5</number></property>
+         <item>
+          <layout class="QHBoxLayout">
+          <item><widget class="QLabel" name="lbl_an4"><property name="text"><string>Teclado</string></property></widget></item>
+          <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+          <item><widget class="QLabel" name="val_an4"><property name="text"><string>0%</string></property><property name="font"><font><bold>true</bold></font></property></widget></item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="bar_an4">
+          <property name="value"><number>0</number></property>
+          <property name="textVisible"><bool>false</bool></property>
+          <property name="maximumHeight"><number>8</number></property>
+          </widget>
+         </item>
+         </layout>
+        </item>
+
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <spacer>
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+     </spacer>
+    </item>
+    </layout>
+   </widget>
+   </item>
+
+   <!-- PANEL DERECHO: TOP INFRACTORES -->
+   <item>
+   <widget class="QFrame" name="panel_infractores">
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>1</horstretch><verstretch>0</verstretch></sizepolicy></property>
+    <layout class="QVBoxLayout">
+    <property name="spacing"><number>15</number></property>
+    <property name="leftMargin"><number>30</number></property>
+    <property name="topMargin"><number>30</number></property>
+    <property name="rightMargin"><number>30</number></property>
+    <property name="bottomMargin"><number>30</number></property>
+    <item>
+     <widget class="QLabel" name="titulo_infractores">
+     <property name="text"><string>Top Infractores</string></property>
+     <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+     </widget>
+    </item>
+
+    <!-- INFRACTOR 1 -->
+    <item>
+     <widget class="QFrame" name="ranking_item_1">
+     <layout class="QHBoxLayout">
+      <property name="spacing"><number>15</number></property>
+      <property name="leftMargin"><number>15</number></property>
+      <property name="topMargin"><number>15</number></property>
+      <property name="rightMargin"><number>15</number></property>
+      <property name="bottomMargin"><number>15</number></property>
+      <item>
+      <widget class="QLabel" name="rank_num_1">
+       <property name="text"><string>1</string></property>
+       <property name="alignment"><set>Qt::AlignCenter</set></property>
+       <property name="minimumSize"><size><width>36</width><height>36</height></size></property>
+       <property name="maximumSize"><size><width>36</width><height>36</height></size></property>
+      </widget>
+      </item>
+      <item>
+      <layout class="QVBoxLayout">
+       <item><widget class="QLabel" name="rank_name_1"><property name="text"><string>Juan Pérez</string></property><property name="font"><font><bold>true</bold></font></property></widget></item>
+       <item><widget class="QLabel" name="rank_al_1"><property name="text"><string>15 Alertas</string></property></widget></item>
+      </layout>
+      </item>
+      <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+      <item>
+      <widget class="QPushButton" name="btn_ap_1">
+       <property name="text"><string>Ver Detalle</string></property>
+       <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+       <property name="minimumSize"><size><width>120</width><height>35</height></size></property>
+      </widget>
+      </item>
+     </layout>
+     </widget>
+    </item>
+
+    <!-- INFRACTOR 2 -->
+    <item>
+     <widget class="QFrame" name="ranking_item_2">
+     <layout class="QHBoxLayout">
+      <property name="spacing"><number>15</number></property>
+      <property name="leftMargin"><number>15</number></property>
+      <property name="topMargin"><number>15</number></property>
+      <property name="rightMargin"><number>15</number></property>
+      <property name="bottomMargin"><number>15</number></property>
+      <item>
+      <widget class="QLabel" name="rank_num_2">
+       <property name="text"><string>2</string></property>
+       <property name="alignment"><set>Qt::AlignCenter</set></property>
+       <property name="minimumSize"><size><width>36</width><height>36</height></size></property>
+       <property name="maximumSize"><size><width>36</width><height>36</height></size></property>
+      </widget>
+      </item>
+      <item>
+      <layout class="QVBoxLayout">
+       <item><widget class="QLabel" name="rank_name_2"><property name="text"><string>Carlos Ruiz</string></property><property name="font"><font><bold>true</bold></font></property></widget></item>
+       <item><widget class="QLabel" name="rank_al_2"><property name="text"><string>8 Alertas</string></property></widget></item>
+      </layout>
+      </item>
+      <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+      <item>
+      <widget class="QPushButton" name="btn_ap_2">
+       <property name="text"><string>Ver Detalle</string></property>
+       <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+       <property name="minimumSize"><size><width>120</width><height>35</height></size></property>
+      </widget>
+      </item>
+     </layout>
+     </widget>
+    </item>
+
+    <!-- INFRACTOR 3 -->
+    <item>
+     <widget class="QFrame" name="ranking_item_3">
+     <layout class="QHBoxLayout">
+      <property name="spacing"><number>15</number></property>
+      <property name="leftMargin"><number>15</number></property>
+      <property name="topMargin"><number>15</number></property>
+      <property name="rightMargin"><number>15</number></property>
+      <property name="bottomMargin"><number>15</number></property>
+      <item>
+      <widget class="QLabel" name="rank_num_3">
+       <property name="text"><string>3</string></property>
+       <property name="alignment"><set>Qt::AlignCenter</set></property>
+       <property name="minimumSize"><size><width>36</width><height>36</height></size></property>
+       <property name="maximumSize"><size><width>36</width><height>36</height></size></property>
+      </widget>
+      </item>
+      <item>
+      <layout class="QVBoxLayout">
+       <item><widget class="QLabel" name="rank_name_3"><property name="text"><string>Ana Lucía</string></property><property name="font"><font><bold>true</bold></font></property></widget></item>
+       <item><widget class="QLabel" name="rank_al_3"><property name="text"><string>5 Alertas</string></property></widget></item>
+      </layout>
+      </item>
+      <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+      <item>
+      <widget class="QPushButton" name="btn_ap_3">
+       <property name="text"><string>Ver Detalle</string></property>
+       <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+       <property name="minimumSize"><size><width>120</width><height>35</height></size></property>
+      </widget>
+      </item>
+     </layout>
+     </widget>
+    </item>
+
+    <!-- BOTÓN DIRECTORIO COMPLETO -->
+    <item>
+     <widget class="QPushButton" name="btn_ver_todos_estudiantes">
+      <property name="text"><string>👥 Ver Directorio Completo de Estudiantes (0) →</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      <property name="minimumSize"><size><width>0</width><height>38</height></size></property>
+     </widget>
+    </item>
+
+    <item>
+     <spacer>
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>20</width><height>30</height></size></property>
+     </spacer>
+    </item>
+
+    </layout>
+   </widget>
+   </item>
+  </layout>
+  </item>
+
+  <!-- VEREDICTO GENERAL -->
+  <item>
+  <widget class="QFrame" name="panel_veredicto">
+   <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+   <layout class="QVBoxLayout">
+   <property name="spacing"><number>15</number></property>
+   <property name="leftMargin"><number>30</number></property>
+   <property name="topMargin"><number>30</number></property>
+   <property name="rightMargin"><number>30</number></property>
+   <property name="bottomMargin"><number>30</number></property>
+   <item>
+    <layout class="QHBoxLayout" name="layout_header_veredicto">
+     <item>
+      <widget class="QLabel" name="titulo_veredicto">
+       <property name="text"><string>⚖️ Dictamen Forense y Evaluación de IA</string></property>
+       <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+     <item>
+      <widget class="QLabel" name="badge_veredicto_modelo">
+       <property name="text"><string>🤖 Modelo: IA Local</string></property>
+       <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="badge_veredicto_riesgo">
+       <property name="text"><string>🛡️ Riesgo Evaluado</string></property>
+       <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="texto_veredicto">
+    <property name="text"><string>Calculando veredicto...</string></property>
+    <property name="font"><font><family>Segoe UI</family><pointsize>12</pointsize></font></property>
+    <property name="wordWrap"><bool>true</bool></property>
+    
+    </widget>
+   </item>
+   </layout>
+  </widget>
+  </item>
+
+ </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

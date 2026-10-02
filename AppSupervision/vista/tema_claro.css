@@ -1,0 +1,235 @@
+/* tema_claro.css - AppSupervision */
+
+QWidget {
+    font-family: "Arial", "Helvetica", sans-serif;
+}
+
+/* Fondos Generales */
+QWidget#VentanaLogin, QWidget#VentanaPrincipal {
+    background-color: #F4F6F6;
+}
+QWidget#pagina_examen {
+    background-color: #F4F6F6;
+}
+
+/* Tarjetas y Frames */
+QFrame#tarjeta_login, QFrame#tarjeta_pin, QFrame#frame_moodle, QFrame#frame_supervision {
+    background-color: white;
+    border-radius: 0px;
+    border: 1px solid #E0E0E0;
+}
+
+QFrame#tarjeta_bloqueo {
+    background-color: #F8F9F9;
+    border-radius: 0px;
+    border: 1px solid #A93226;
+}
+
+/* Textos Generales */
+QLabel {
+    color: #2C3E50;
+}
+QLabel#etiqueta_titulo {
+    color: #1A252F;
+    font-weight: bold;
+}
+QLabel#titulo_pin, QLabel#titulo_panel {
+    color: #196F3D;
+    font-weight: bold;
+}
+QLabel#etiqueta_subtitulo, QLabel#subtitulo_pin, QLabel#estado_monitoreo {
+    color: #7F8C8D;
+}
+QLabel#titulo_bloqueo {
+    color: #C0392B;
+}
+QLabel#etiqueta_correo, QLabel#etiqueta_clave {
+    color: #2C3E50;
+    font-weight: bold;
+}
+
+/* Logo Circular */
+QLabel#etiqueta_logo, QLabel#etiqueta_logo_pin {
+    background-color: #EAEDED;
+    color: #196F3D;
+    border-radius: 0px; /* Hace el círculo perfecto de 60x60 */
+    border: 1px solid #C8E6C9;
+}
+
+/* Contenedores de Input (Simulan el borde del QLineEdit) */
+QFrame#frame_input_correo, QFrame#frame_input_clave, QFrame#frame_input_pin {
+    background-color: white;
+    border: 1px solid #CCCCCC;
+    border-radius: 0px;
+}
+QFrame#frame_input_correo:hover, QFrame#frame_input_clave:hover, QFrame#frame_input_pin:hover {
+    border: 1px solid #A0A0A0;
+}
+QLabel#icono_correo, QLabel#icono_clave, QLabel#icono_pin {
+    color: #95A5A6;
+    font-size: 16px;
+}
+
+/* Entradas de Texto (Inputs) */
+QLineEdit, QTextEdit {
+    border: 1px solid #CCCCCC;
+    border-radius: 0px;
+    padding: 10px;
+    font-size: 14px;
+    color: #2C3E50;
+    background-color: white;
+}
+QLineEdit:focus, QTextEdit:focus {
+    border: 1px solid #196F3D;
+}
+
+/* Los QLineEdit dentro de los nuevos frames no deben tener borde propio */
+QFrame#frame_input_correo QLineEdit, QFrame#frame_input_clave QLineEdit, QFrame#frame_input_pin QLineEdit {
+    border: none;
+    background-color: transparent;
+    padding: 5px;
+}
+QFrame#frame_input_correo QLineEdit:focus, QFrame#frame_input_clave QLineEdit:focus, QFrame#frame_input_pin QLineEdit:focus {
+    border: none;
+}
+
+/* Botones Principales */
+QPushButton {
+    background-color: #196F3D;
+    color: white;
+    border-radius: 0px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #0F5D21;
+}
+
+/* Botón Apelación */
+QPushButton#btn_apelacion_examen {
+    background-color: transparent;
+    color: #C0392B;
+    border: 1px solid #C0392B;
+}
+QPushButton#btn_apelacion_examen:hover {
+    background-color: #FDF2F2;
+}
+QPushButton#btn_apelacion_examen:disabled {
+    color: #E29A93; /* Rojo grisáceo pálido */
+    border: 1px solid #E29A93;
+    background-color: transparent;
+}
+
+/* Fondo Cámara */
+QFrame#frame_camara_bg {
+    background-color: #2D3131;
+    border-radius: 0px;
+}
+QFrame#frame_camara_bg QLabel {
+    color: #7F8C8D;
+}
+
+/* Botones Secundarios y Peligro */
+QPushButton#btn_salir_examen {
+    background-color: #196F3D;
+}
+QPushButton#btn_salir_examen:hover {
+    background-color: #0F5D21;
+}
+
+QPushButton#boton_ojo {
+    background-color: transparent;
+    color: #95A5A6;
+    border: none;
+    font-size: 16px;
+    border-radius: 0px;
+}
+QPushButton#boton_ojo:hover {
+    color: #2C3E50;
+    background-color: #F4F6F6;
+}
+
+QPushButton#btn_cambiar_tema {
+    background-color: #F8F9F9;
+    color: #2C3E50;
+    border: 1px solid #CCCCCC;
+}
+QPushButton#btn_cambiar_tema:hover {
+    background-color: #E5E8E8;
+}
+
+/* === PANTALLA DE APELACIÓN === */
+QFrame#tarjeta_bloqueo {
+    background-color: white;
+    border-radius: 0px;
+    border-top: none;
+    border-left: 1px solid #E0E0E0;
+    border-right: 1px solid #E0E0E0;
+    border-bottom: 1px solid #E0E0E0;
+}
+QLabel#lbl_desc_apelacion {
+    color: #2C3E50;
+}
+QTextEdit#entrada_apelacion {
+    border: 1px solid #CCCCCC;
+    border-radius: 0px;
+    background-color: #FAFAFA;
+}
+QTextEdit#entrada_apelacion:focus {
+    border: 1px solid #196F3D;
+    background-color: white;
+}
+
+/* Botón Adjuntar */
+QPushButton#btn_adjuntar_evidencia {
+    background-color: #F8F9F9;
+    color: #7F8C8D;
+    border: 1px dashed #BDC3C7;
+    border-radius: 0px;
+}
+QPushButton#btn_adjuntar_evidencia:hover {
+    background-color: #ECF0F1;
+    color: #2C3E50;
+    border: 1px dashed #95A5A6;
+}
+
+/* Botones Inferiores */
+QPushButton#btn_volver_login {
+    background-color: transparent;
+    color: #7F8C8D;
+    border: 1px solid #BDC3C7;
+    border-radius: 0px;
+    font-weight: bold;
+}
+QPushButton#btn_volver_login:hover {
+    background-color: #F8F9F9;
+    color: #2C3E50;
+}
+QPushButton#btn_enviar_apelacion {
+    background-color: #196F3D;
+    color: white;
+    border-radius: 0px;
+}
+QPushButton#btn_enviar_apelacion:hover {
+    background-color: #0F5D21;
+}
+
+/* Cámara */
+QLabel#lbl_camara {
+    background-color: #000000;
+    color: white;
+    border-radius: 0px;
+}
+
+/* Fix para QMessageBox oscuros en Windows */
+QMessageBox {
+    background-color: #F4F6F6;
+}
+QMessageBox QLabel {
+    color: #2C3E50;
+}
+QMessageBox QPushButton {
+    background-color: #196F3D;
+    color: white;
+    min-width: 80px;
+    padding: 5px;
+}

@@ -1,0 +1,185 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>CrearExamen</class>
+ <widget class="QWidget" name="CrearExamen">
+ <property name="geometry">
+  <rect>
+  <x>0</x>
+  <y>0</y>
+  <width>800</width>
+  <height>600</height>
+  </rect>
+ </property>
+ <layout class="QVBoxLayout" name="layout_principal">
+  <property name="leftMargin"><number>40</number></property>
+  <property name="topMargin"><number>40</number></property>
+  <property name="rightMargin"><number>40</number></property>
+  <property name="bottomMargin"><number>40</number></property>
+  <item>
+  <widget class="QFrame" name="tarjeta_formulario">
+   <layout class="QVBoxLayout" name="layout_tarjeta">
+   <property name="spacing"><number>20</number></property>
+   <property name="leftMargin"><number>40</number></property>
+   <property name="topMargin"><number>40</number></property>
+   <property name="rightMargin"><number>40</number></property>
+   <property name="bottomMargin"><number>30</number></property>
+   
+   
+   <item>
+    <widget class="QLabel" name="titulo_principal">
+    <property name="text"><string>Nuevo Examen</string></property>
+    </widget>
+   </item>
+   
+   <item>
+    <widget class="Line" name="linea_separador_1">
+    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+    <property name="styleSheet"><string>color: #E0E0E0;</string></property>
+    </widget>
+   </item>
+
+   
+   <item>
+    <layout class="QGridLayout" name="grid_formulario">
+    <property name="horizontalSpacing"><number>30</number></property>
+    <property name="verticalSpacing"><number>25</number></property>
+    
+    
+    <item row="0" column="0" colspan="4">
+     <layout class="QVBoxLayout" name="vl_materia">
+     <property name="spacing"><number>8</number></property>
+     <item><widget class="QLabel" name="lbl_materia"><property name="text"><string>Nombre de la Materia</string></property></widget></item>
+     <item><widget class="QLineEdit" name="entrada_materia"><property name="placeholderText"><string>Ej. Matemáticas Aplicadas</string></property></widget></item>
+     </layout>
+    </item>
+    
+
+
+    
+    <item row="1" column="0">
+     <layout class="QVBoxLayout" name="vl_fecha">
+     <property name="spacing"><number>8</number></property>
+     <item><widget class="QLabel" name="lbl_fecha"><property name="text"><string>Fecha Programada</string></property></widget></item>
+     <item>
+      <widget class="QDateEdit" name="entrada_fecha">
+      <property name="calendarPopup"><bool>true</bool></property>
+      <property name="displayFormat"><string>dd/MM/yyyy</string></property>
+      <property name="maximumSize"><size><width>150</width><height>16777215</height></size></property></widget>
+     </item>
+     </layout>
+    </item>
+    
+    <item row="1" column="2">
+     <layout class="QVBoxLayout" name="vl_hora">
+     <property name="spacing"><number>8</number></property>
+     <item><widget class="QLabel" name="lbl_hora"><property name="text"><string>Hora de Inicio</string></property></widget></item>
+       <item>
+        <layout class="QHBoxLayout" name="hl_hora">
+         <property name="spacing"><number>0</number></property>
+         <property name="leftMargin"><number>0</number></property>
+         <property name="topMargin"><number>0</number></property>
+         <property name="rightMargin"><number>0</number></property>
+         <property name="bottomMargin"><number>0</number></property>
+         <item>
+          <widget class="QTimeEdit" name="entrada_hora_texto">
+           <property name="displayFormat"><string>hh:mm</string></property><property name="minimumSize"><size><width>0</width><height>36</height></size></property>
+           <property name="buttonSymbols"><enum>QAbstractSpinBox::NoButtons</enum></property>
+           <property name="maximumSize"><size><width>90</width><height>16777215</height></size></property></widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="entrada_hora_ampm"><property name="minimumSize"><size><width>0</width><height>36</height></size></property>
+           <item><property name="text"><string>AM</string></property></item>
+           <item><property name="text"><string>PM</string></property></item>
+          <property name="maximumSize"><size><width>80</width><height>16777215</height></size></property></widget>
+         </item>
+         </layout>
+       </item>
+       </layout>
+      </item>
+    
+    <item row="1" column="3">
+       <layout class="QVBoxLayout" name="vl_duracion">
+       <property name="spacing"><number>8</number></property>
+       <item><widget class="QLabel" name="lbl_duracion"><property name="text"><string>Duración 
+(minutos)</string></property></widget></item>
+       <item>
+        <layout class="QHBoxLayout" name="hl_duracion">
+         <property name="spacing"><number>0</number></property>
+         <property name="leftMargin"><number>0</number></property>
+         <property name="topMargin"><number>0</number></property>
+         <property name="rightMargin"><number>0</number></property>
+         <property name="bottomMargin"><number>0</number></property>
+         <item>
+          <widget class="QSpinBox" name="entrada_duracion">
+          <property name="minimum"><number>1</number></property>
+          <property name="maximum"><number>300</number></property>
+          <property name="value"><number>60</number></property>
+          <property name="buttonSymbols"><enum>QAbstractSpinBox::NoButtons</enum></property>
+          <property name="maximumSize"><size><width>100</width><height>16777215</height></size></property></widget>
+         </item>
+         </layout>
+       </item>
+     </layout>
+    </item>
+
+    <item row="1" column="1">
+       <layout class="QVBoxLayout" name="vl_fecha_fin">
+       <property name="spacing"><number>8</number></property>
+       <item><widget class="QLabel" name="lbl_fecha_fin"><property name="text"><string>Fecha Fin</string></property></widget></item>
+       <item>
+        <widget class="QDateEdit" name="entrada_fecha_fin">
+        <property name="calendarPopup"><bool>true</bool></property>
+        <property name="displayFormat"><string>dd/MM/yyyy</string></property>
+        <property name="maximumSize"><size><width>150</width><height>16777215</height></size></property></widget>
+       </item>
+       </layout>
+      </item></layout>
+   </item>
+
+   <item>
+    <spacer name="spacer_formulario">
+    <property name="orientation"><enum>Qt::Vertical</enum></property>
+    <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+    </spacer>
+   </item>
+   
+   <item>
+    <widget class="Line" name="linea_separador_2">
+    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+    <property name="styleSheet"><string>color: #E0E0E0;</string></property>
+    </widget>
+   </item>
+
+   
+   <item>
+    <layout class="QHBoxLayout" name="layout_botones">
+    <property name="topMargin"><number>10</number></property>
+    <item>
+     <spacer name="spacer_botones">
+     <property name="orientation"><enum>Qt::Horizontal</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btn_cancelar">
+     <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+     <property name="text"><string>Cancelar</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btn_siguiente">
+     <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+     <property name="text"><string>Siguiente: Configuración </string></property>
+     </widget>
+    </item>
+    </layout>
+   </item>
+
+   </layout>
+  </widget>
+  </item>
+ </layout>
+ </widget>
+ <resources />
+ <connections />
+</ui>

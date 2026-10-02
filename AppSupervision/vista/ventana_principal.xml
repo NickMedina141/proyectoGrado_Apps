@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VentanaPrincipal</class>
+ <widget class="QWidget" name="VentanaPrincipal">
+ <property name="geometry">
+  <rect>
+  <x>0</x>
+  <y>0</y>
+  <width>1200</width>
+  <height>800</height>
+  </rect>
+ </property>
+ <property name="windowTitle">
+  <string>Supervisión UPC - Estudiante</string>
+ </property>
+ 
+ <layout class="QVBoxLayout" name="layout_global">
+  <property name="margin"><number>0</number></property>
+  <property name="spacing"><number>0</number></property>
+  
+  <item>
+  <widget class="QStackedWidget" name="stack_vistas">
+   
+   <!-- PAGINA 0: INGRESO DE PIN -->
+   <widget class="QWidget" name="pagina_pin">
+   <layout class="QVBoxLayout" name="layout_pagina_pin">
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <item>
+    <widget class="QFrame" name="tarjeta_pin">
+     <property name="minimumSize"><size><width>450</width><height>420</height></size></property>
+     <property name="maximumSize"><size><width>450</width><height>420</height></size></property>
+     <layout class="QVBoxLayout">
+     <property name="leftMargin"><number>40</number></property>
+     <property name="topMargin"><number>40</number></property>
+     <property name="rightMargin"><number>40</number></property>
+     <property name="bottomMargin"><number>40</number></property>
+     <property name="spacing"><number>15</number></property>
+     
+     <!-- LOGO CIRCULAR PIN -->
+     <item>
+      <layout class="QHBoxLayout">
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      <item>
+       <widget class="QLabel" name="etiqueta_logo_pin">
+       <property name="minimumSize"><size><width>60</width><height>60</height></size></property>
+       <property name="maximumSize"><size><width>60</width><height>60</height></size></property>
+       <property name="text"><string></string></property>
+       <property name="alignment"><set>Qt::AlignCenter</set></property>
+       <property name="font"><font><pointsize>20</pointsize></font></property>
+       </widget>
+      </item>
+      </layout>
+     </item>
+
+     <!-- Título -->
+     <item>
+      <widget class="QLabel" name="titulo_pin">
+      <property name="font"><font><family>Segoe UI</family><pointsize>18</pointsize><bold>true</bold></font></property>
+      <property name="text"><string>Validación de Examen</string></property>
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      </widget>
+     </item>
+
+     <!-- Subtítulo -->
+     <item>
+      <widget class="QLabel" name="subtitulo_pin">
+      <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize></font></property>
+      <property name="text"><string>Ingresa el PIN proporcionado por tu&lt;br&gt;profesor para iniciar el examen.</string></property>
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      </widget>
+     </item>
+
+     <item>
+      <spacer name="spacer_medio_pin">
+      <property name="orientation"><enum>Qt::Vertical</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>20</width><height>15</height></size></property>
+      </spacer>
+     </item>
+     
+     <!-- Contenedor Input PIN -->
+     <item>
+      <widget class="QFrame" name="frame_input_pin">
+      <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+      <layout class="QHBoxLayout">
+       <property name="margin"><number>0</number></property>
+       <property name="spacing"><number>10</number></property>
+       <item>
+       <widget class="QLineEdit" name="entrada_pin">
+        <property name="placeholderText"><string>Ej: 8492-4912</string></property>
+        <property name="alignment"><set>Qt::AlignCenter</set></property>
+        <property name="font"><font><pointsize>14</pointsize><bold>true</bold></font></property>
+        <property name="frame"><bool>false</bool></property>
+       </widget>
+       </item>
+      </layout>
+      </widget>
+     </item>
+     
+     <item>
+      <spacer name="spacer_boton_pin">
+      <property name="orientation"><enum>Qt::Vertical</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>20</width><height>15</height></size></property>
+      </spacer>
+     </item>
+     
+     <!-- Boton Ingresar -->
+     <item>
+      <widget class="QPushButton" name="btn_ingresar_pin">
+      <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>11</pointsize><bold>true</bold></font></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      <property name="text"><string>Validar e Ingresar →</string></property>
+      </widget>
+     </item>
+     
+     </layout>
+    </widget>
+    </item>
+   </layout>
+   </widget>
+   
+   <!-- PAGINA 1: EXAMEN Y SUPERVISIÓN -->
+   <widget class="QWidget" name="pagina_examen">
+   <layout class="QHBoxLayout" name="layout_examen">
+    <property name="margin"><number>10</number></property>
+    <property name="spacing"><number>10</number></property>
+    
+    <!-- ZONA NAVEGADOR -->
+    <item>
+    <widget class="QFrame" name="frame_moodle">
+     <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>3</horstretch><verstretch>0</verstretch></sizepolicy></property>
+     <layout class="QVBoxLayout" name="layout_navegador">
+     <property name="margin"><number>0</number></property>
+     <item>
+      <widget class="QWidget" name="contenedor_navegador">
+       <layout class="QVBoxLayout" name="vl_contenedor_navegador">
+        <property name="margin"><number>0</number></property>
+       </layout>
+      </widget>
+     </item>
+     </layout>
+    </widget>
+    </item>
+    
+    <!-- ZONA SUPERVISIÓN Y CONTROL -->
+    <item>
+    <widget class="QFrame" name="frame_supervision">
+     <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>1</horstretch><verstretch>0</verstretch></sizepolicy></property>
+     <property name="maximumWidth"><number>350</number></property>
+     <layout class="QVBoxLayout">
+     <property name="margin"><number>20</number></property>
+     <property name="spacing"><number>15</number></property>
+     
+     <item>
+      <widget class="QLabel" name="titulo_panel">
+      <property name="text"><string>Supervisión Activa</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><bold>true</bold></font></property>
+      <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QLabel" name="estado_monitoreo">
+      <property name="text"><string>Tu actividad está siendo supervisada</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>9</pointsize></font></property>
+      <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+      <property name="wordWrap"><bool>true</bool></property>
+      </widget>
+     </item>
+
+     <item>
+      <widget class="QLabel" name="lbl_temporizador">
+      <property name="text"><string>Tiempo: --:--:--</string></property>
+      <property name="font"><font><family>Consolas</family><pointsize>12</pointsize><bold>true</bold></font></property>
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      <property name="styleSheet"><string>color: #e74c3c;</string></property>
+      </widget>
+     </item>
+
+     <!-- CÁMARA ESTUDIANTE -->
+     <item>
+      <widget class="QFrame" name="frame_camara_bg">
+      <property name="minimumSize"><size><width>300</width><height>200</height></size></property>
+      <property name="maximumSize"><size><width>300</width><height>200</height></size></property>
+      <layout class="QVBoxLayout">
+       <property name="margin"><number>0</number></property>
+       <item>
+       <widget class="QLabel" name="lbl_camara">
+        <property name="text"><string>Cámara en Vivo</string></property>
+        <property name="alignment"><set>Qt::AlignCenter</set></property>
+       </widget>
+       </item>
+      </layout>
+      </widget>
+     </item>
+     
+     <item>
+      <spacer name="spacer_supervision">
+      <property name="orientation"><enum>Qt::Vertical</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+      </spacer>
+     </item>
+     
+     <item>
+      <widget class="QPushButton" name="btn_cambiar_tema">
+      <property name="minimumSize"><size><width>0</width><height>40</height></size></property>
+      <property name="text"><string>Cambiar Tema</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QPushButton" name="btn_apelacion_examen">
+      <property name="enabled"><bool>false</bool></property>
+      <property name="minimumSize"><size><width>0</width><height>40</height></size></property>
+      <property name="text"><string>Solicitar Segunda Revisión</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QPushButton" name="btn_salir_examen">
+      <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+      <property name="text"><string>Terminar Examen</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      </widget>
+     </item>
+     </layout>
+    </widget>
+    </item>
+    
+   </layout>
+   </widget>
+   
+   <!-- PAGINA 2: BLOQUEADO / APELACIÓN -->
+   <widget class="QWidget" name="pagina_bloqueo">
+   <layout class="QVBoxLayout" name="layout_pagina_bloqueo">
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <item>
+    <widget class="QFrame" name="tarjeta_bloqueo">
+     <property name="minimumSize"><size><width>650</width><height>550</height></size></property>
+     <property name="maximumSize"><size><width>650</width><height>550</height></size></property>
+     <layout class="QVBoxLayout">
+     <property name="margin"><number>40</number></property>
+     <property name="spacing"><number>15</number></property>
+     
+     <item>
+      <widget class="QLabel" name="icono_bloqueo">
+      <property name="text"><string></string></property>
+      <property name="font"><font><pointsize>28</pointsize></font></property>
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QLabel" name="titulo_bloqueo">
+      <property name="text"><string>Examen Suspendido por Actividad Anómala</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>18</pointsize><bold>true</bold></font></property>
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QLabel" name="subtitulo_bloqueo">
+      <property name="text"><string>El sistema de supervisión o el docente han detenido tu sesión. Si consideras&lt;br&gt;que es un error, completa este formulario oficial para revisión.</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize></font></property>
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      </widget>
+     </item>
+     
+     <item>
+      <spacer name="spacer_apelacion_1">
+      <property name="orientation"><enum>Qt::Vertical</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>20</width><height>10</height></size></property>
+      </spacer>
+     </item>
+     
+     <item>
+      <widget class="QLabel" name="lbl_desc_apelacion">
+      <property name="text"><string>&lt;b&gt;Formulario de Revisión de Caso&lt;/b&gt;</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize></font></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QTextEdit" name="entrada_apelacion">
+      <property name="placeholderText"><string>Redacta de manera clara y respetuosa los motivos de tu apelación...</string></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QPushButton" name="btn_adjuntar_evidencia">
+      <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+      <property name="text"><string>Adjuntar Captura de Pantalla o Evidencia (Opcional)</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      </widget>
+     </item>
+     
+     <item>
+      <spacer name="spacer_apelacion_2">
+      <property name="orientation"><enum>Qt::Vertical</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>20</width><height>15</height></size></property>
+      </spacer>
+     </item>
+     
+     <item>
+      <widget class="QPushButton" name="btn_volver_login">
+      <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+      <property name="text"><string>Cerrar App y Volver al Menú</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      </widget>
+     </item>
+     
+     <item>
+      <widget class="QPushButton" name="btn_enviar_apelacion">
+      <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+      <property name="text"><string>Solicitar Segunda Revisión al Profesor</string></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      </widget>
+     </item>
+     
+     </layout>
+    </widget>
+    </item>
+   </layout>
+   </widget>
+   
+  </widget>
+  </item>
+ </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

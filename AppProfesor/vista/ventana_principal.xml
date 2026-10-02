@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VentanaPrincipal</class>
+ <widget class="QWidget" name="VentanaPrincipal">
+ <property name="geometry">
+  <rect>
+  <x>0</x>
+  <y>0</y>
+  <width>1100</width>
+  <height>750</height>
+  </rect>
+ </property>
+ <property name="windowTitle">
+  <string>Panel Docente - UPC</string>
+ </property>
+ <layout class="QHBoxLayout" name="layout_global">
+  <property name="spacing"><number>0</number></property>
+  <property name="leftMargin"><number>0</number></property>
+  <property name="topMargin"><number>0</number></property>
+  <property name="rightMargin"><number>0</number></property>
+  <property name="bottomMargin"><number>0</number></property>
+  
+  <!-- NAVBAR LATERAL -->
+  <item>
+  <widget class="QFrame" name="navbar_lateral">
+   <property name="minimumSize"><size><width>220</width><height>0</height></size></property>
+   <property name="maximumSize"><size><width>220</width><height>16777215</height></size></property>
+   <layout class="QVBoxLayout" name="layout_navbar">
+   <property name="spacing"><number>8</number></property>
+   <property name="leftMargin"><number>15</number></property>
+   <property name="topMargin"><number>30</number></property>
+   <property name="rightMargin"><number>15</number></property>
+   <property name="bottomMargin"><number>30</number></property>
+   
+   <item>
+    <layout class="QHBoxLayout" name="layout_logo">
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <item>
+     <widget class="QLabel" name="label_logo_placeholder">
+     <property name="minimumSize"><size><width>100</width><height>100</height></size></property>
+     <property name="maximumSize"><size><width>100</width><height>100</height></size></property>
+     <property name="styleSheet"><string>background-color: white; border-radius: 50px;</string></property>
+     <property name="text"><string/></property>
+     </widget>
+    </item>
+    </layout>
+   </item>
+
+   <item>
+    <widget class="QPushButton" name="btn_nav_dashboard">
+    <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="text"><string>Dashboard</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QPushButton" name="btn_nav_sala">
+    <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="text"><string>Sala de Supervisión</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QPushButton" name="btn_nav_apelaciones">
+    <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="text"><string>Segunda Revisión</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QPushButton" name="btn_nav_reportes">
+    <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="text"><string>Reportes</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <spacer name="spacer_abajo">
+    <property name="orientation"><enum>Qt::Vertical</enum></property>
+    <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+    </spacer>
+   </item>
+
+   <item>
+    <widget class="QPushButton" name="btn_nav_ayuda">
+    <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="text"><string>Ayuda</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QPushButton" name="btn_nav_tema">
+    <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="text"><string>Modo Noche</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QPushButton" name="btn_nav_salir">
+    <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+    <property name="text"><string>Cerrar Sesión</string></property>
+    </widget>
+   </item>
+   
+   <item>
+    <widget class="QLabel" name="label_version">
+    <property name="text"><string>Versión 1.0</string></property>
+    <property name="styleSheet"><string>color: #F1C40F; font-size: 11px; margin-top: 10px; margin-bottom: 10px; padding-left: 15px;</string></property>
+    </widget>
+   </item>
+
+   </layout>
+  </widget>
+  </item>
+
+  <!-- ÁREA CENTRAL DONDE SE INTERCAMBIAN LAS VISTAS -->
+  <item>
+  <widget class="QStackedWidget" name="contenedor_vistas">
+   
+   <!-- PÁGINA 1: DASHBOARD INTEGRADO AQUÍ -->
+   <widget class="QWidget" name="pagina_dashboard">
+   <layout class="QVBoxLayout" name="layout_dash_principal">
+    <property name="leftMargin"><number>40</number></property>
+    <property name="topMargin"><number>40</number></property>
+    <property name="rightMargin"><number>40</number></property>
+    <property name="bottomMargin"><number>40</number></property>
+    <property name="spacing"><number>20</number></property>
+    
+    <item>
+    <layout class="QHBoxLayout" name="layout_cabecera">
+     <item>
+     <layout class="QVBoxLayout" name="layout_titulos">
+      <property name="spacing"><number>5</number></property>
+      <item>
+      <widget class="QLabel" name="etiqueta_titulo">
+       <property name="font"><font><family>Segoe UI</family><pointsize>20</pointsize><bold>true</bold></font></property>
+       <property name="text"><string>Mis Exámenes Activos</string></property>
+      </widget>
+      </item>
+      <item>
+      <widget class="QLabel" name="etiqueta_subtitulo">
+       <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize></font></property>
+       <property name="text"><string>Gestiona y supervisa las evaluaciones en curso.</string></property>
+      </widget>
+      </item>
+     </layout>
+     </item>
+     <item>
+     <spacer name="espaciador_cabecera">
+      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+     </spacer>
+     </item>
+     <item>
+     <widget class="QPushButton" name="boton_crear_examen">
+      <property name="minimumSize"><size><width>160</width><height>40</height></size></property>
+      <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      <property name="text"><string>+ Nuevo Examen</string></property>
+     </widget>
+     </item>
+    </layout>
+    </item>
+
+    <item>
+    <widget class="QScrollArea" name="area_scroll">
+     <property name="widgetResizable"><bool>true</bool></property>
+     <widget class="QWidget" name="contenido_scroll">
+     <!-- IMPORTANTE: El layout alinea los elementos arriba a la izquierda para evitar que se estiren de forma fea -->
+     <layout class="QGridLayout" name="layout_examenes">
+      <property name="spacing"><number>20</number></property>
+      
+      <!-- TARJETA 1 -->
+      <item row="0" column="0" alignment="Qt::AlignLeft|Qt::AlignTop">
+      <widget class="QFrame" name="tarjeta_1">
+       <property name="minimumSize"><size><width>280</width><height>240</height></size></property>
+       <property name="maximumSize"><size><width>280</width><height>240</height></size></property>
+       <layout class="QVBoxLayout" name="layout_t1">
+       <property name="spacing"><number>10</number></property>
+       <property name="leftMargin"><number>20</number></property>
+       <property name="topMargin"><number>20</number></property>
+       <property name="rightMargin"><number>20</number></property>
+       <property name="bottomMargin"><number>20</number></property>
+       <item>
+        <layout class="QHBoxLayout" name="layout_t1_top">
+        <item>
+         <widget class="QLabel" name="icon_t1">
+         <property name="minimumSize"><size><width>40</width><height>40</height></size></property>
+         <property name="maximumSize"><size><width>40</width><height>40</height></size></property>
+         <property name="text"><string>&lt;div align=&quot;center&quot;&gt;&lt;/div&gt;</string></property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="sp1">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="badge_t1">
+         <property name="text"><string>En Curso</string></property>
+         </widget>
+        </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="titulo_t1">
+        <property name="font"><font><family>Segoe UI</family><pointsize>12</pointsize><bold>true</bold></font></property>
+        <property name="text"><string>Cálculo Diferencial - Grupo 01</string></property>
+        <property name="wordWrap"><bool>true</bool></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="fecha_t1">
+        <property name="text"><string>15 Ago 2026</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="inscritos_t1">
+        <property name="text"><string>35 Inscritos</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="linea_t1">
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="layout_t1_bot">
+        <item>
+         <spacer name="sp2">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_t1">
+         <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+         <property name="text"><string>Entrar a Supervisar </string></property>
+         </widget>
+        </item>
+        </layout>
+       </item>
+       </layout>
+      </widget>
+      </item>
+      </layout>
+     </widget>
+    </widget>
+    </item>
+   </layout>
+   </widget>
+   <!-- FIN PÁGINA DASHBOARD -->
+
+  </widget>
+  </item>
+
+ </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PanelApelaciones</class>
+ <widget class="QWidget" name="PanelApelaciones">
+ <property name="geometry">
+  <rect>
+  <x>0</x>
+  <y>0</y>
+  <width>800</width>
+  <height>600</height>
+  </rect>
+ </property>
+ <layout class="QVBoxLayout" name="layout_principal">
+  <property name="spacing"><number>0</number></property>
+  <property name="leftMargin"><number>0</number></property>
+  <property name="topMargin"><number>0</number></property>
+  <property name="rightMargin"><number>0</number></property>
+  <property name="bottomMargin"><number>0</number></property>
+  <item>
+  <widget class="QFrame" name="frame_cuerpo">
+   <layout class="QVBoxLayout" name="layout_cuerpo">
+   <property name="leftMargin"><number>40</number></property>
+   <property name="topMargin"><number>30</number></property>
+   <property name="rightMargin"><number>40</number></property>
+   <property name="bottomMargin"><number>30</number></property>
+   <property name="spacing"><number>20</number></property>
+   
+   <item>
+    <layout class="QVBoxLayout">
+    <property name="spacing"><number>10</number></property>
+    <item>
+     <widget class="QLabel" name="etiqueta_titulo">
+     <property name="font"><font><family>Segoe UI</family><pointsize>26</pointsize><bold>true</bold></font></property>
+     <property name="text"><string>Segunda Revisión de Novedades</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="etiqueta_subtitulo">
+     <property name="text"><string>Gestiona y revisa las solicitudes de segunda revisión de evaluaciones.</string></property>
+     </widget>
+    </item>
+    </layout>
+   </item>
+
+   <item>
+    <widget class="QTableWidget" name="tabla_apelaciones">
+    <property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property>
+    <property name="selectionBehavior"><set>QAbstractItemView::SelectRows</set></property>
+    <property name="selectionMode"><enum>QAbstractItemView::SingleSelection</enum></property>
+    <property name="showGrid"><bool>false</bool></property>
+    <attribute name="horizontalHeaderStretchLastSection"><bool>true</bool></attribute>
+    <column><property name="text"><string>ID</string></property></column>
+    <column><property name="text"><string>Estudiante</string></property></column>
+    <column><property name="text"><string>Examen</string></property></column>
+    <column><property name="text"><string>Motivo Principal</string></property></column>
+    <column><property name="text"><string>Estado</string></property></column>
+    <column><property name="text"><string>Acciones</string></property></column>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QLabel" name="etiqueta_vacia">
+    <property name="text"><string>No existen solicitudes de revisión pendientes</string></property>
+    <property name="font"><font><family>Segoe UI</family><pointsize>16</pointsize><italic>true</italic></font></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <property name="styleSheet"><string>color: #7F8C8D;</string></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QFrame" name="frame_paginacion">
+    <layout class="QHBoxLayout" name="layout_paginacion">
+     <item>
+     <spacer name="spacer_izq_pag">
+      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+     </spacer>
+     </item>
+     <item>
+     <widget class="QPushButton" name="btn_pag_prev">
+      <property name="text"><string>&lt;</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      <property name="maximumSize"><size><width>40</width><height>30</height></size></property>
+     </widget>
+     </item>
+     <item>
+     <widget class="QLabel" name="lbl_paginacion">
+      <property name="text"><string>1 / 1</string></property>
+      <property name="alignment"><set>Qt::AlignCenter</set></property>
+      <property name="minimumSize"><size><width>60</width><height>30</height></size></property>
+      <property name="font"><font><bold>true</bold></font></property>
+     </widget>
+     </item>
+     <item>
+     <widget class="QPushButton" name="btn_pag_next">
+      <property name="text"><string>&gt;</string></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      <property name="maximumSize"><size><width>40</width><height>30</height></size></property>
+     </widget>
+     </item>
+     <item>
+     <spacer name="spacer_der_pag">
+      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+     </spacer>
+     </item>
+    </layout>
+    </widget>
+   </item>
+
+   </layout>
+  </widget>
+  </item>
+ </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

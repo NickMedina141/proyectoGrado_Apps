@@ -1,0 +1,608 @@
+# vista/sala_supervision.py
+import os
+from PyQt6.QtWidgets import QWidget, QMessageBox, QFrame, QVBoxLayout, QHBoxLayout, QLabel, QDialog, QPushButton
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtCore import Qt, QTimer, QUrl
+import json
+from PyQt6 import uic
+
+from api.cliente_ws import HiloWebSocket
+
+
+class SalaSupervision(QWidget):
+    def __init__(self, id_sesion=""):
+        super().__init__()
+
+        base_path = os.path.dirname(__file__)
+        uic.loadUi(os.path.join(base_path, "sala_supervision.xml"), self)
+
+        self.boton_finalizar.clicked.connect(self.finalizar_examen)
+        if hasattr(self, 'boton_mapa'):
+            self.boton_mapa.clicked.connect(self.mostrar_mapa)
+
+        # Crear contenedor principal del mapa in-app
+        self.frame_mapa_contenedor = QFrame()
+        self.frame_mapa_contenedor.setVisible(False)
+        self.layout_mapa = QVBoxLayout()
+        self.layout_mapa.setContentsMargins(0, 0, 0, 0)
+        self.layout_mapa.setSpacing(0)
+        self.frame_mapa_contenedor.setLayout(self.layout_mapa)
+        self.layout_global.addWidget(self.frame_mapa_contenedor)
+
+        self.timer_mapa = QTimer(self)
+        self.timer_mapa.timeout.connect(self.actualizar_pines_mapa)
+
+        # Evitar que el badge "EN VIVO" se estire ocupando todo el ancho disponible
+        from PyQt6.QtWidgets import QSizePolicy
+        self.badge_envivo.setSizePolicy(
+            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+
+        self.tarjetas_estudiantes = {}
+        self.estado_vacio(True)
+        self.codigo_examen_actual = None
+        self.estado_estudiantes = {}
+        self.sesiones_activas_ids = set()
+
+    def actualizar_pines_mapa(self):
+        if not self.codigo_examen_actual or not hasattr(self, 'vista_mapa'):
+            return
+        from api.cliente_respuesta import cliente_api
+        exito, datos = cliente_api.obtener_sesiones_examen(
+            self.codigo_examen_actual, todas=True)
+        estudiantes_dict = {}
+        if exito and isinstance(datos, list):
+            for s in datos:
+                nombre = s.get("nombreEstudiante", "Desconocido")
+                conexion = s.get("conexion", {})
+                if conexion:
+                    lat = conexion.get("latitud")
+                    lon = conexion.get("longitud")
+                    if lat is not None and lon is not None and lat != 0.0 and lon != 0.0:
+                        estudiantes_dict[nombre] = {
+                            "nombre": nombre, "lat": lat, "lon": lon}
+        estudiantes_gps = list(estudiantes_dict.values())
+        import json
+        json_est = json.dumps(estudiantes_gps)
+        self.vista_mapa.page().runJavaScript(f"cargarPines({json_est});")
+
+    def cerrar_mapa(self):
+        self.timer_mapa.stop()
+        self.frame_mapa_contenedor.setVisible(False)
+        self.frame_central.setVisible(True)
+        self.frame_feed_alertas.setVisible(True)
+        while self.layout_mapa.count():
+            item = self.layout_mapa.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+    def mostrar_mapa(self):
+        if not self.codigo_examen_actual:
+            return
+        from api.cliente_respuesta import cliente_api
+        exito, datos = cliente_api.obtener_sesiones_examen(
+            self.codigo_examen_actual, todas=True)
+        estudiantes_dict = {}
+        if exito and isinstance(datos, list):
+            for s in datos:
+                nombre = s.get("nombreEstudiante", "Desconocido")
+                conexion = s.get("conexion", {})
+                if conexion:
+                    lat = conexion.get("latitud")
+                    lon = conexion.get("longitud")
+                    if lat is not None and lon is not None and lat != 0.0 and lon != 0.0:
+                        estudiantes_dict[nombre] = {
+                            "nombre": nombre, "lat": lat, "lon": lon}
+        estudiantes_gps = list(estudiantes_dict.values())
+
+        self.cerrar_mapa()
+
+        barra = QFrame()
+        barra.setFixedHeight(50)
+        barra.setStyleSheet("QFrame { background-color: #2C3E50; }")
+        lay_barra = QHBoxLayout()
+        lay_barra.setContentsMargins(15, 0, 15, 0)
+
+        btn_cerrar = QPushButton("← Regresar a la supervision")
+        btn_cerrar.setStyleSheet(
+            "QPushButton { background-color: transparent; color: #E74C3C; font-weight: bold; font-size: 14px; border: none; } QPushButton:hover { color: #ff6b6b; }")
+        from PyQt6.QtCore import Qt
+        btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cerrar.clicked.connect(self.cerrar_mapa)
+        lay_barra.addWidget(btn_cerrar)
+
+        titulo = QLabel("Mapa de Estudiantes Histórico")
+        titulo.setStyleSheet(
+            "QLabel { color: white; font-size: 16px; font-weight: bold; background-color: transparent; }")
+        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay_barra.addWidget(titulo)
+        lay_barra.addStretch()
+
+        barra.setLayout(lay_barra)
+        self.layout_mapa.addWidget(barra)
+
+        self.vista_mapa = QWebEngineView()
+        self.vista_mapa.settings().setAttribute(
+            self.vista_mapa.settings().WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        import os
+        ruta_html = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), "recursos", "mapa_leaflet.html"))
+        with open(ruta_html, "r", encoding="utf-8") as f_html:
+            html_str = f_html.read()
+        self.vista_mapa.setHtml(html_str, QUrl("http://localhost"))
+        self.layout_mapa.addWidget(self.vista_mapa)
+
+        import json
+        json_est = json.dumps(estudiantes_gps)
+        self.vista_mapa.loadFinished.connect(
+            lambda: self.vista_mapa.page().runJavaScript(f"cargarPines({json_est});"))
+
+        self.frame_central.setVisible(False)
+        self.frame_feed_alertas.setVisible(False)
+        self.frame_mapa_contenedor.setVisible(True)
+        self.timer_mapa.start(5000)
+
+    def estado_vacio(self, vacio, texto="Actualmente no se esta supervisando nada"):
+        self.etiqueta_vacia.setVisible(vacio)
+        self.etiqueta_vacia.setText(texto)
+        self.area_scroll_grupos.setVisible(not vacio)
+        self.badge_envivo.setVisible(not vacio)
+        self.etiqueta_titulo.setVisible(not vacio)
+        self.boton_finalizar.setVisible(not vacio)
+        if hasattr(self, 'boton_mapa'):
+            self.boton_mapa.setVisible(not vacio)
+        self.frame_feed_alertas.setVisible(not vacio)
+        if vacio:
+            self.limpiar_sala()
+
+    def limpiar_sala(self):
+        # Eliminar tarjetas de estudiantes
+        for i in reversed(range(self.layout_grupos.count())):
+            item = self.layout_grupos.itemAt(i)
+            if item.widget() and item.widget() != self.etiqueta_vacia:
+                item.widget().setParent(None)
+
+        # Eliminar alertas del feed
+        for i in reversed(range(self.layout_feed.count())):
+            item = self.layout_feed.itemAt(i)
+            if item.widget():
+                item.widget().setParent(None)
+
+        self.tarjetas_estudiantes.clear()
+        if hasattr(self, 'hilo_ws') and self.hilo_ws.corriendo:
+            self.hilo_ws.detener()
+
+    def cargar_estudiantes(self, codigo_examen, nombre_materia=""):
+        self.limpiar_sala()
+        self.codigo_examen_actual = codigo_examen
+        self.estado_vacio(False)
+        self.estado_estudiantes = {}  # Diccionario para rastrear estados
+
+        titulo = nombre_materia if nombre_materia else codigo_examen
+        self.etiqueta_titulo.setText(f"Monitoreo de Examen: {titulo}")
+
+        from api.cliente_respuesta import cliente_api
+        exito, datos = cliente_api.obtener_sesiones_examen(codigo_examen)
+
+        self.sesiones_activas_ids = set()
+        if exito and isinstance(datos, list) and len(datos) >0:
+            for sesion in datos:
+                nombre = sesion.get("nombreEstudiante", "")
+                sesion_id = sesion.get("id") or sesion.get("sesionId")
+                if nombre:
+                    self.estado_estudiantes[nombre] = sesion.get(
+                        "estadoSesion", "PENDIENTE")
+                if sesion_id:
+                    self.sesiones_activas_ids.add(sesion_id)
+                self.crear_tarjeta_estudiante(sesion)
+            self.area_scroll_grupos.setVisible(True)
+            self.etiqueta_vacia.setVisible(False)
+        else:
+            self.area_scroll_grupos.setVisible(False)
+            self.etiqueta_vacia.setVisible(True)
+            self.etiqueta_vacia.setText(
+                "No hay estudiantes aun presentando el examen")
+
+        self.iniciar_conexion_en_vivo(codigo_examen)
+
+        # Cargar el historial global de alertas de este examen
+        exito_alertas, alertas = cliente_api.obtener_alertas_examen(
+            codigo_examen)
+        if exito_alertas and isinstance(alertas, list):
+            from datetime import datetime
+            fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+
+            for alerta in reversed(alertas):  # reversed para que las mas recientes queden arriba
+                hora_completa = alerta.get(
+                    "horaCaptura", alerta.get("hora", ""))
+
+                # FILTRO 1: No revivir alertas de dias anteriores en la vista "En Vivo"
+                if "T" in hora_completa:
+                    fecha_alerta = hora_completa.split("T")[0]
+                    if fecha_alerta != fecha_hoy:
+                        continue
+
+                # FILTRO 2: No revivir alertas de sesiones pasadas
+                sesion_id = alerta.get("sesionId")
+                if sesion_id not in getattr(self, "sesiones_activas_ids", set()):
+                    continue
+
+                nombre_est = alerta.get(
+                    "nombreEstudiante", alerta.get("estudiante", "Desconocido"))
+
+                self.agregar_tarjeta_alerta(alerta)
+
+    def crear_tarjeta_estudiante(self, sesion):
+        from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy
+
+        estudiante_id = sesion.get("estudianteId", "Desconocido")
+        nombre = sesion.get("nombreEstudiante", f"Estudiante {estudiante_id[:5]}")
+
+        tarjeta = QFrame()
+        tarjeta.setObjectName("tarjeta_e1")
+        tarjeta.setMinimumWidth(200)
+        tarjeta.setMaximumWidth(300)
+        tarjeta.setMinimumHeight(260)
+
+        lay_t = QVBoxLayout(tarjeta)
+        lay_t.setSpacing(10)
+        lay_t.setContentsMargins(20, 20, 20, 20)
+
+        # TOP ROW
+        top_row = QHBoxLayout()
+        lbl_titulo = QLabel(nombre)
+        lbl_titulo.setObjectName("titulo_e1")
+        lbl_titulo.setStyleSheet("font-weight: bold; font-size: 16px;")
+        lbl_titulo.setWordWrap(True)
+
+        lbl_badge = QLabel("En Vivo")
+        lbl_badge.setObjectName("badge_verde_1")
+
+        top_row.addWidget(lbl_titulo)
+        top_row.addWidget(lbl_badge)
+        lay_t.addLayout(top_row)
+
+        lay_t.addSpacerItem(QSpacerItem(
+            20, 10, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
+
+        # INTEGRIDAD
+        row_int = QHBoxLayout()
+        lbl_i1 = QLabel("Integridad IA")
+        lbl_i1.setObjectName("label_est_1")
+
+        integridad = sesion.get("porcentajeIntegridad", 100)
+        lbl_val_int = QLabel(f"{integridad}%")
+        lbl_val_int.setObjectName("val_norm_1")
+
+        if integridad >= 80:
+            lbl_val_int.setStyleSheet("font-weight: bold; color: #003B13;")
+        elif integridad >= 50:
+            lbl_val_int.setStyleSheet("font-weight: bold; color: #d35400;")
+        else:
+            lbl_val_int.setStyleSheet("font-weight: bold; color: #c0392b;")
+
+        row_int.addWidget(lbl_i1)
+        row_int.addStretch()
+        row_int.addWidget(lbl_val_int)
+        lay_t.addLayout(row_int)
+
+        # ALERTAS
+        row_al = QHBoxLayout()
+        lbl_a1 = QLabel("Alertas")
+        lbl_a1.setObjectName("label_al_1")
+
+        alertas = sesion.get("cantidadAlertas", 0)
+        lbl_val_al = QLabel(str(alertas))
+        lbl_val_al.setObjectName("val_norm_2")
+
+        if alertas == 0:
+            lbl_val_al.setStyleSheet("font-weight: bold; color: #003B13;")
+        elif alertas <= 3:
+            lbl_val_al.setStyleSheet("font-weight: bold; color: #d35400;")
+        else:
+            lbl_val_al.setStyleSheet("font-weight: bold; color: #c0392b;")
+
+        row_al.addWidget(lbl_a1)
+        row_al.addStretch()
+        row_al.addWidget(lbl_val_al)
+        lay_t.addLayout(row_al)
+
+        # CONEXION
+        row_cx = QHBoxLayout()
+        lbl_c1 = QLabel("Estado de Conexión")
+        lbl_c1.setObjectName("label_cx_1")
+        lbl_c1.setWordWrap(True)
+
+        estado_db = sesion.get("estadoSesion", "")
+        if estado_db == "EN_CURSO":
+            texto_conexion = "Buena"
+            color_cx = "#27AE60"
+        else:
+            texto_conexion = "Mala"
+            color_cx = "#E74C3C"
+
+        lbl_val_cx = QLabel(texto_conexion)
+        lbl_val_cx.setObjectName("val_green_1")
+        lbl_val_cx.setStyleSheet(f"font-weight: bold; color: {color_cx};")
+        row_cx.addWidget(lbl_c1)
+        row_cx.addWidget(lbl_val_cx)
+        lay_t.addLayout(row_cx)
+
+        lay_t.addSpacerItem(QSpacerItem(
+            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+
+        btn_cam = QPushButton("Ver Cámara")
+        btn_cam.setObjectName("btn_e1")
+        btn_cam.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cam.setMinimumHeight(35)
+        sesion_id = sesion.get("sesionId") or sesion.get("id") or ""
+        btn_cam.clicked.connect(lambda checked, n=nombre,
+                                sid=sesion_id: self.abrir_estudiante(n, sid))
+        lay_t.addWidget(btn_cam)
+
+        self.layout_grupos.addWidget(tarjeta)
+
+        self.tarjetas_estudiantes[sesion_id] = {
+            "widget": tarjeta,
+          "lbl_alertas": lbl_val_al,
+          "lbl_integridad": lbl_val_int,
+          "badge": lbl_badge,
+          "alertas_count": alertas,
+          "integridad": integridad
+        }
+
+    def abrir_estudiante(self, nombre, sesion_id):
+        parent = self.window()
+        if hasattr(parent, "abrir_detalle_estudiante"):
+            parent.abrir_detalle_estudiante(nombre, sesion_id)
+
+    def iniciar_conexion_en_vivo(self, id_sesion):
+        ruta_especifica = f"/{id_sesion}" if id_sesion else ""
+        self.hilo_ws = HiloWebSocket(ruta_especifica)
+
+        self.hilo_ws.alerta_recibida.connect(self.mostrar_nueva_alerta)
+        self.hilo_ws.conexion_perdida.connect(self.notificar_desconexion)
+
+        def en_conexion():
+            self.badge_envivo.setText(" EN VIVO")
+            self.badge_envivo.setStyleSheet(
+                "background-color: #E74C3C; color: white; border-radius: 4px; padding: 4px; font-weight: bold;")
+            if hasattr(self.window(), 'mostrar_overlay_reconexion'):
+                self.window().mostrar_overlay_reconexion(False)
+        self.hilo_ws.conectado.connect(en_conexion)
+
+        self.hilo_ws.start()
+
+    def mostrar_nueva_alerta(self, datos_alerta):
+        if datos_alerta.get("tipoEvento") == "ESTUDIANTE_UNIDO":
+            self.cargar_estudiantes(self.codigo_examen_actual)
+            return
+
+        # Cuando entra por websocket
+        datos_alerta["nueva_alerta_ws"] = True
+        
+        # BYPASS E2EE: Guardar la evidencia localmente!
+        import os
+        base_dir = os.path.join(os.path.expanduser("~"), "Documents", "DataSupervision", "Examenes", self.codigo_examen_actual, datos_alerta.get("nombreEstudiante", "Desconocido").replace(" ", "_"), datos_alerta.get("sesionId", "unknown"))
+        for cat in ['audio', 'proceso', 'webcam', 'teclado']:
+            os.makedirs(os.path.join(base_dir, cat), exist_ok=True)
+            
+        def guardar_b64(b64, subcarpeta, sufijo):
+            if b64:
+                import base64
+                if "," in b64: b64 = b64.split(",")[1]
+                path = os.path.join(base_dir, subcarpeta, f"evidencia_{datos_alerta.get('idAlerta', 'ws')}{sufijo}")
+                with open(path, "wb") as f_out:
+                    if b64.startswith("gAAAAA"): f_out.write(b64.encode('utf-8'))
+                    else: f_out.write(base64.b64decode(b64))
+
+        guardar_b64(datos_alerta.get("base64WebcamTransient"), "webcam", ".webp")
+        
+        clase = datos_alerta.get("claseAlerta", "").upper()
+        if clase in ["SISTEMA", "PROCESO", "PROCESOS"]:
+            guardar_b64(datos_alerta.get("base64PantallaTransient"), "proceso", ".webp")
+        elif clase == "TECLADO":
+            guardar_b64(datos_alerta.get("base64PantallaTransient"), "teclado", ".webp")
+        else:
+            guardar_b64(datos_alerta.get("base64PantallaTransient"), "webcam", "_pantalla.webp")
+            
+        guardar_b64(datos_alerta.get("base64AudioTransient"), "audio", ".wav")
+        
+        self.agregar_tarjeta_alerta(datos_alerta)
+
+    def agregar_tarjeta_alerta(self, alerta):
+        from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+        from PyQt6.QtCore import Qt
+
+        # Extraer datos basicos
+        clase_alerta = alerta.get(
+            "claseAlerta", alerta.get("tipo", "DESCONOCIDO")).upper()
+        nombre_est = alerta.get(
+            "nombreEstudiante", alerta.get("estudiante", "Desconocido"))
+
+        # OPClON 2: Averiguar si la sesion de este estudiante esta FINALIZADA
+        estado_sesion = getattr(self, "estado_estudiantes", {}).get(
+            nombre_est, "PENDIENTE")
+        es_finalizada = (estado_sesion == "FINALIZADA")
+
+        bg_color = "#f9f9f9" if es_finalizada else "#ffffff"
+        border_color = "#e8e8e8" if es_finalizada else "#dcdde1"
+
+        tarjeta = QFrame()
+        tarjeta.setObjectName("tarjeta_alerta_limpia")
+        tarjeta.setStyleSheet(f"""
+        QFrame#tarjeta_alerta_limpia {{ 
+            border: 1px solid {border_color}; 
+            border-radius: 6px;
+            background-color: {bg_color};
+            margin-bottom: 8px; 
+        }}
+    """)
+
+        layout = QVBoxLayout(tarjeta)
+        layout.setSpacing(6)
+        layout.setContentsMargins(12, 10, 12, 12)
+
+        # Hora de captura
+        hora_str = alerta.get("horaCaptura", alerta.get("hora", ""))
+        if "T" in hora_str:
+            hora_str = hora_str.split("T")[1][:5]
+
+        nivel_riesgo = alerta.get("nivelRiesgo", "MEDIO").upper()
+
+        # Colores segun estado
+        if es_finalizada:
+            color_riesgo = "#aaaaaa"
+            color_nombre = "#999999"
+            color_desc = "#bbbbbb"
+            clase_alerta += " [Finalizado]"
+        else:
+            color_riesgo = "#2c3e50"
+            if nivel_riesgo == "ALTO":
+                color_riesgo = "#c0392b"
+            elif nivel_riesgo == "MEDIO":
+                color_riesgo = "#d35400"
+            elif nivel_riesgo == "BAJO":
+                color_riesgo = "#27ae60"
+            color_nombre = "#2c3e50"
+            color_desc = "#7f8c8d"
+
+        top_row = QHBoxLayout()
+
+        # Texto de tipo de alerta sin recuadro (fondo transparente)
+        lbl_tipo = QLabel(clase_alerta)
+        lbl_tipo.setStyleSheet(f"""
+        color: {color_riesgo}; 
+        background-color: transparent;
+        font-weight: bold; 
+        font-size: 13px;
+    """)
+
+        lbl_hora = QLabel(hora_str)
+        lbl_hora.setStyleSheet("color: #95a5a6; font-size: 11px;")
+
+        top_row.addWidget(lbl_tipo)
+        top_row.addStretch()
+        top_row.addWidget(lbl_hora)
+        layout.addLayout(top_row)
+
+        lbl_nombre = QLabel(nombre_est)
+        lbl_nombre.setStyleSheet(
+            f"font-weight: bold; font-size: 14px; color: {color_nombre};")
+        layout.addWidget(lbl_nombre)
+
+        # Extraer descrpcion dinamica
+        desc = alerta.get("descripcion", alerta.get("mensaje", ""))
+        if not desc:
+            obj = alerta.get("objetoDetectado", "")
+            if obj:
+                desc = f"Objeto: {obj}"
+
+        if desc:
+            lbl_desc = QLabel(desc)
+            lbl_desc.setWordWrap(True)
+            lbl_desc.setStyleSheet(f"color: {color_desc}; font-size: 12px;")
+            layout.addWidget(lbl_desc)
+
+        # Boton Ver Evidencia
+        est_id = alerta.get("estudianteId", alerta.get("sesionId", ""))
+        btn_link = QPushButton("Ver Evidencia")
+        btn_link.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_link.setStyleSheet(f"""
+        QPushButton {{
+            color: {color_riesgo}; 
+            background-color: transparent;
+            text-align: left;
+
+            border: none;
+            text-decoration: underline;
+            font-size: 12px;
+            font-weight: bold;
+        }}
+        QPushButton:hover {{
+            color: #2980b9;
+        }}
+    """)
+        btn_link.clicked.connect(
+            lambda checked, n=nombre_est, sid=est_id: self.abrir_estudiante(n, sid))
+        layout.addWidget(btn_link)
+
+        self.layout_feed.insertWidget(0, tarjeta)
+
+        # Actualizar tarjeta del estudiante si existe
+        est_id = alerta.get("estudianteId", alerta.get("sesionId", ""))
+        if est_id and est_id in self.tarjetas_estudiantes:
+            tarjeta_est = self.tarjetas_estudiantes[est_id]
+
+            # Actualizar el numero de alertas sumando 1 si es una nueva alerta (vía WebSocket)
+            # Las alertas del historial REST ya vienen contabilizadas en la carga inicial
+            if alerta.get("nueva_alerta_ws", False):
+                lbl_al = tarjeta_est["widget"].findChild(QLabel, "val_norm_2")
+                if lbl_al:
+                    try:
+                        actual = int(lbl_al.text())
+                        lbl_al.setText(str(actual + 1))
+                        lbl_al.setStyleSheet(
+                            "font-weight: bold; color: #c0392b;")
+                    except:
+                        pass
+
+            tipo = alerta.get("claseAlerta", alerta.get("tipo", ""))
+            if "VISION" in tipo.upper() or "AUDIO" in tipo.upper() or "PROCESO" in tipo.upper():
+
+                # Bajar integridad dinámicamente si llega por websocket
+                if alerta.get("nueva_alerta_ws", False):
+                    try:
+                        texto_int = tarjeta_est["lbl_integridad"].text().replace(
+                            "%", "")
+                        integridad_actual = int(texto_int)
+                        nivel = alerta.get("nivelRiesgo", "MEDIO").upper()
+                        descuento = 15
+                        if nivel == "ALTO":
+                            descuento = 30
+                        elif nivel == "BAJO": descuento = 5
+
+                        nueva_int = max(0, integridad_actual - descuento)
+                        tarjeta_est["lbl_integridad"].setText(f"{nueva_int}%")
+
+                        if nueva_int < 50:
+                            tarjeta_est["lbl_integridad"].setStyleSheet(
+                                "font-weight: bold; color: #c0392b;")
+                        elif nueva_int < 80:
+                            tarjeta_est["lbl_integridad"].setStyleSheet(
+                                "font-weight: bold; color: #d35400;")
+                    except Exception as e:
+                        pass
+
+                # Cambiar badge a Alerta
+                tarjeta_est["badge"].setText("Alerta")
+                tarjeta_est["badge"].setObjectName("badge_rojo_1")
+                tarjeta_est["widget"].setStyleSheet(
+                    tarjeta_est["widget"].styleSheet())
+
+    def notificar_desconexion(self, mensaje):
+        self.badge_envivo.setText(" RECONECTANDO...")
+        self.badge_envivo.setStyleSheet(
+            "background-color: #F39C12; color: white; border-radius: 4px; padding: 4px; font-weight: bold;")
+        if hasattr(self.window(), 'mostrar_overlay_reconexion'):
+            self.window().mostrar_overlay_reconexion(True)
+        # La reconexion ahora es automatica e interna en HiloWebSocket.
+
+    def finalizar_examen(self):
+        respuesta = QMessageBox.question(self, "Cerrar Sala", "¿Seguro que desea finalizar el monitoreo?",
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if respuesta == QMessageBox.StandardButton.Yes:
+            from api.cliente_respuesta import cliente_api
+            exito, mensaje = cliente_api.cerrar_examen(
+                self.codigo_examen_actual)
+
+            if exito:
+                self.estado_vacio(True)
+                QMessageBox.information(
+                    self, "Examen Finalizado", "El examen ha sido cerrado en el servidor.")
+                # Avisar al parent (ventana principal) que recargue el dashboard
+                parent = self.window()
+                if hasattr(parent, "cargar_mis_examenes"):
+                    parent.cargar_mis_examenes()
+            else:
+                QMessageBox.warning(self, "Error", mensaje)

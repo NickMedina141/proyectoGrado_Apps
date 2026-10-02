@@ -1,0 +1,41 @@
+# ===============================================
+# GitIgnore - Proyecto de Grado UPC (Apps de Escritorio)
+# ===============================================
+
+# Entornos virtuales de Python
+**/Lib/
+**/Scripts/
+**/include/
+**/venv/
+**/env/
+**/*_env/
+pyvenv.cfg
+
+# Bytecode y cache de Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Carpetas de compilacion y empaquetado
+**/build/
+**/dist/
+**/installer_output/
+*.spec
+*.pkg
+
+# Instaladores e imagenes temporales pesadas
+python-3.12.10-amd64.exe
+*.exe
+*.lnk
+yolo11m.pt
+AppSegurity/
+
+# Logs y temporales
+*.log
+scratch/
+actualizaciones/
+test_frame.jpg
+.user_uploaded/
+.system_generated/
+.idea/
+.vscode/

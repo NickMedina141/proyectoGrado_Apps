@@ -1,0 +1,536 @@
+/* tema_oscuro.css */
+QWidget#VentanaPrincipal { background-color: #0F172A; }
+QDialog#ModalAyuda { background-color: #1E293B; }
+QDialog#ModalAyuda QLabel { color: #E2E8F0; }
+QFrame#navbar_lateral { background-color: #0B1120; border-right: 1px solid #1E293B; }
+QLabel#label_logo { color: white; border: none; }
+
+/* Dashboard Styles */
+QLabel#etiqueta_titulo { color: #E2E8F0; }
+QLabel#etiqueta_subtitulo { color: #F8FAFC; }
+QPushButton#boton_crear_examen {
+    background-color: #196F3D;
+    color: white;
+    border-radius: 0px;
+}
+QPushButton#boton_crear_examen:hover { background-color: #1E8449; }
+QScrollArea, QScrollArea > QWidget, QWidget#contenido_scroll, QWidget#ReporteIA, QWidget#CrearExamen, QWidget#ConfiguracionExamen { background-color: transparent; border: none; }
+
+QFrame#tarjeta_1, QFrame#tarjeta_dinamica {
+    background-color: #1E293B;
+    border-radius: 0px;
+    border: 1px solid #334155;
+}
+QLabel#icon_t1, QLabel#icon_dinamico {
+      background-color: transparent;
+      color: #1E8449;
+      border-radius: 0px;
+    font-size: 16px;
+}
+QLabel#badge_t1 {
+    background-color: #064E3B;
+    color: #1E8449;
+    border-radius: 0px;
+    padding: 5px 10px;
+    font-weight: bold;
+    border: 1px solid #059669;
+}
+QLabel#titulo_t1, QLabel#titulo_dinamico { color: #F8FAFC; font-weight: bold; font-size: 16px; }
+QLabel#fecha_t1, QLabel#inscritos_t1, QLabel#fecha_dinamico, QLabel#id_dinamico { color: #94A3B8; }
+Line#linea_t1 { color: #334155; }
+QPushButton#btn_t1, QPushButton#btn_dinamico {
+    color: #1E8449;
+    font-weight: bold;
+    border: none;
+    background: transparent;
+}
+QPushButton#btn_toggle_dinamico {
+    color: #94A3B8;
+    font-weight: bold;
+    font-size: 15px;
+    border: none;
+    background: transparent;
+    margin-right: 10px;
+}
+QPushButton#btn_t1:hover, QPushButton#btn_dinamico:hover { color: #1E8449; text-decoration: underline; }
+QPushButton#btn_toggle_dinamico:hover { color: #F1F5F9; text-decoration: underline; }
+
+/* SALA DE SUPERVISION (DARK MODE) */
+QFrame#frame_central { background-color: #0F172A; }
+QFrame#frame_feed_alertas { background-color: #1E293B; border-left: 1px solid #334155; }
+QLabel#badge_envivo {
+    background-color: #450A0A; color: #FCA5A5; border-radius: 0px;
+    padding: 4px 10px; font-weight: bold; font-size: 11px; border: 1px solid #7F1D1D;
+}
+QPushButton#boton_finalizar {
+    background-color: #7F1D1D; color: white; font-weight: bold;
+    border-radius: 0px; border: 1px solid #991B1B;
+}
+QPushButton#boton_finalizar:hover { background-color: #991B1B; }
+QLabel#titulo_feed { color: #F1F5F9; }
+QLabel#estado_feed { color: #94A3B8; }
+QScrollArea#area_scroll_grupos, QWidget#contenido_grupos { background: transparent; border: none; }
+QScrollArea#area_scroll_feed, QWidget#contenido_feed { background: transparent; border: none; }
+
+QFrame#tarjeta_e1, QFrame#tarjeta_e2, QFrame#tarjeta_e3 {
+    background-color: #1E293B; border-radius: 0px; border: 1px solid #334155;
+}
+QLabel#titulo_e1, QLabel#titulo_e2, QLabel#titulo_e3 { color: #F8FAFC; }
+QLabel#badge_verde_1, QLabel#badge_verde_2 {
+    background-color: #064E3B; color: #1E8449; border-radius: 0px;
+    padding: 3px 8px; font-weight: bold; font-size: 11px; border: 1px solid #059669;
+}
+QLabel#badge_rojo_1, QLabel#badge_rojo_2 {
+    background-color: #450A0A; color: #FCA5A5; border-radius: 0px;
+    padding: 3px 8px; font-weight: bold; font-size: 11px; border: 1px solid #7F1D1D;
+}
+QLabel#label_est_1, QLabel#label_est_2, QLabel#label_est_3, QLabel#label_al_1, QLabel#label_al_2, QLabel#label_al_3, QLabel#label_cx_1, QLabel#label_cx_2, QLabel#label_cx_3 { color: #94A3B8; }
+QLabel#val_norm_1, QLabel#val_norm_2, QLabel#val_norm_3 { color: #F1F5F9; }
+QLabel#val_red_1, QLabel#val_red_2, QLabel#val_red_3, QLabel#val_red_4 { color: #FCA5A5; }
+QLabel#val_green_1, QLabel#val_green_2, QLabel#val_green_3 { color: #1E8449; }
+
+QPushButton#btn_e1, QPushButton#btn_e2, QPushButton#btn_e3 {
+    background-color: #059669; color: white; border-radius: 0px; font-weight: bold; border: none;
+}
+QPushButton#btn_e1:hover, QPushButton#btn_e2:hover, QPushButton#btn_e3:hover {
+    background-color: #047857;
+}
+
+QFrame#alerta_mock_1, QFrame#alerta_fraude_dinamica {
+    background-color: #450a0a; border-left: 2px solid #EF4444; border-radius: 0px;
+}
+QLabel#alm1_titulo { color: #FCA5A5; }
+QLabel#alm1_hora, QLabel#alm1_desc { color: #F8FAFC; }
+QLabel#alm1_link { color: #FCA5A5; }
+
+QFrame#alerta_mock_2, QFrame#alerta_sistema_dinamica {
+    background-color: #1E293B; border-left: 2px solid #94A3B8; border-radius: 0px;
+}
+QLabel#alm2_titulo { color: #E2E8F0; }
+QLabel#alm2_hora, QLabel#alm2_desc { color: #CBD5E1; }
+
+/* DETALLE ESTUDIANTE (DARK MODE) */
+QPushButton#btn_contactar { background-color: #059669; color: white; border-radius: 0px; font-weight: bold; }
+QPushButton#btn_contactar:hover { background-color: #047857; }
+
+QFrame#tarjeta_metricas, QFrame#tarjeta_historial {
+    background-color: #1E293B; border-radius: 0px; border: 1px solid #334155;
+}
+QLabel#titulo_metricas, QLabel#titulo_historial { color: #F1F5F9; }
+QFrame#item_metrica_1, QFrame#item_metrica_2, QFrame#item_metrica_3 {
+    border: 1px solid #334155; border-radius: 0px;
+}
+QLabel#lm1_tit, QLabel#lm2_tit, QLabel#lm3_tit { color: #F1F5F9; font-size: 13px; }
+QLabel#lm1_sub, QLabel#lm2_sub, QLabel#lm3_sub { color: #94A3B8; font-size: 12px; }
+
+QLabel#badge_verde_metrica, QLabel#badge_verde_metrica_2 {
+    background-color: #064E3B; color: #1E8449; border-radius: 0px; padding: 4px 10px; font-weight: bold; border: 1px solid #059669;
+}
+QLabel#badge_gris_metrica {
+    background-color: #334155; color: #94A3B8; border-radius: 0px; padding: 4px 10px; font-weight: bold; border: 1px solid #475569;
+}
+
+QFrame#sys_box_cpu, QFrame#sys_box_ram {
+    background-color: #0F172A; border-radius: 0px;
+}
+QLabel#lcpu1, QLabel#lram1 { color: #94A3B8; font-size: 11px; }
+QLabel#lcpu2, QLabel#lram2 { color: #F1F5F9; font-size: 14px; }
+
+QFrame#historial_alerta_roja {
+    background-color: transparent; border-bottom: 1px solid #334155; border-radius: 0px; border-left: none; border-right: none;
+}
+QFrame#historial_alerta_verde {
+    background-color: transparent; border-bottom: 1px solid #334155; border-radius: 0px; border-left: none; border-right: none;
+}
+QLabel#hal_titulo_rojo { color: #F1F5F9; font-weight: bold; }
+QLabel#hal_titulo_verde { color: #F1F5F9; font-weight: bold; }
+QLabel#hal_hora { color: #94A3B8; font-size: 11px; }
+QLabel#hal_desc { color: #CBD5E1; font-size: 12px; }
+
+/* REPORTE IA (DARK MODE) */
+QPushButton#btn_descargar_pdf { background-color: #059669; color: white; border-radius: 0px; font-weight: bold; }
+QPushButton#btn_descargar_pdf:hover { background-color: #047857; }
+
+QFrame#tarjeta_top_roja { border-top: none !important; background-color: #1E293B;  border-radius: 0px; border-left: 1px solid #334155; border-right: 1px solid #334155; border-bottom: 1px solid #334155; }
+QFrame#tarjeta_top_naranja { border-top: none !important; background-color: #1E293B;  border-radius: 0px; border-left: 1px solid #334155; border-right: 1px solid #334155; border-bottom: 1px solid #334155; }
+QFrame#tarjeta_top_verde { border-top: none !important; background-color: #1E293B;  border-radius: 0px; border-left: 1px solid #334155; border-right: 1px solid #334155; border-bottom: 1px solid #334155; }
+
+QLabel#icon_rojo { background-color: #991B1B; color: #FECACA; border-radius: 0px; font-size: 20px; font-weight: bold; }
+QLabel#icon_naranja { background-color: #D97706; color: #FEF3C7; border-radius: 0px; font-size: 20px; font-weight: bold; }
+QLabel#icon_verde { background-color: #064E3B; color: #1E8449; border-radius: 0px; font-size: 20px; font-weight: bold; }
+
+QLabel#val_top_rojo, QLabel#val_top_naranja, QLabel#val_top_verde { color: #F8FAFC; }
+QLabel#lbl_top_rojo { color: #FCA5A5; font-weight: bold; font-size: 13px; }
+QLabel#lbl_top_naranja { color: #FCD34D; font-weight: bold; font-size: 13px; }
+QLabel#lbl_top_verde { color: #1E8449; font-weight: bold; font-size: 13px; }
+
+QFrame#panel_analisis, QFrame#panel_infractores { background-color: #1E293B; border-radius: 0px; border: 1px solid #334155; }
+QLabel#titulo_analisis, QLabel#titulo_infractores { color: #F8FAFC; }
+
+QLabel#lbl_an1, QLabel#lbl_an2, QLabel#lbl_an3, QLabel#lbl_an4 { color: #F1F5F9; font-size: 13px; font-weight: bold; }
+QLabel#val_an1, QLabel#val_an2, QLabel#val_an3, QLabel#val_an4 { color: #F8FAFC; font-size: 13px; }
+
+QProgressBar#bar_an1 { border: none; background-color: #334155; border-radius: 0px; }
+QProgressBar#bar_an1::chunk { background-color: #EF4444; border-radius: 0px; }
+
+QProgressBar#bar_an2 { border: none; background-color: #334155; border-radius: 0px; }
+QProgressBar#bar_an2::chunk { background-color: #F59E0B; border-radius: 0px; }
+
+QProgressBar#bar_an3 { border: none; background-color: #334155; border-radius: 0px; }
+QProgressBar#bar_an3::chunk { background-color: #8B5CF6; border-radius: 0px; }
+
+QProgressBar#bar_an4 { border: none; background-color: #334155; border-radius: 0px; }
+QProgressBar#bar_an4::chunk { background-color: #3B82F6; border-radius: 0px; }
+
+QFrame#ranking_item_1, QFrame#ranking_item_2, QFrame#ranking_item_3 { background-color: #0F172A; border-radius: 0px; border: 1px solid #334155; }
+QLabel#rank_num_1, QLabel#rank_num_2, QLabel#rank_num_3 { background-color: #064E3B; color: #FFFFFF; border-radius: 0px; font-weight: bold; font-size: 14px; }
+QLabel#rank_name_1, QLabel#rank_name_2, QLabel#rank_name_3 { color: #F1F5F9; font-size: 14px; }
+QLabel#rank_al_1 { color: #EF4444; font-size: 13px; font-weight: bold; }
+QLabel#rank_al_2, QLabel#rank_al_3 { color: #F59E0B; font-size: 13px; font-weight: bold; }
+
+QPushButton#btn_ap_1, QPushButton#btn_ap_2, QPushButton#btn_ap_3 { background-color: #334155; border: none; border-radius: 4px; padding: 6px; color: #F8FAFC; font-weight: bold; }
+QPushButton#btn_ap_1:hover, QPushButton#btn_ap_2:hover, QPushButton#btn_ap_3:hover { background-color: #334155; }
+
+/* PANEL DE APELACIONES (DARK MODE) */
+QTableWidget#tabla_apelaciones { border: 1px solid #334155; border-radius: 0px; background-color: #1E293B; }
+
+QPushButton#btn_pag_prev, QPushButton#btn_pag_next {
+    background-color: #1E293B; color: #F1F5F9; border: 1px solid #334155; border-radius: 0px; font-weight: bold;
+}
+QPushButton#btn_pag_prev:hover, QPushButton#btn_pag_next:hover {
+    background-color: #334155;
+}
+QPushButton#btn_pag_prev:disabled, QPushButton#btn_pag_next:disabled {
+    background-color: #0F172A; color: #475569; border: 1px solid #1E293B;
+}
+QLabel#lbl_paginacion { color: #F1F5F9; font-weight: bold; }
+QHeaderView::section { background-color: #0F172A; font-weight: bold; padding: 10px; border: none; border-bottom: 1px solid #334155; color: #F1F5F9; }
+QTableWidget#tabla_apelaciones::item { border-bottom: 1px solid #334155; padding: 10px; color: #F1F5F9; }
+QTableWidget#tabla_apelaciones::item:selected { background-color: #334155; color: #1E8449; }
+
+QFrame#frame_acciones_apelacion { background-color: #0F172A; border: 1px solid #334155; border-radius: 0px; }
+
+/* CREAR EXAMEN (PASO 1) (DARK MODE) */
+QFrame#tarjeta_formulario { background-color: #1E293B; border-radius: 0px; border: 1px solid #334155; }
+QLabel#titulo_principal { font-size: 24px; font-weight: bold; color: #F1F5F9; }
+QFrame#tarjeta_formulario QLabel { color: #94A3B8; }
+QFrame#tarjeta_formulario QLineEdit, QFrame#tarjeta_formulario QComboBox, QFrame#tarjeta_formulario QDateEdit, QFrame#tarjeta_formulario QTimeEdit, QFrame#tarjeta_formulario QSpinBox, QFrame#tarjeta_formulario QTextEdit {
+    border: 1px solid #334155; border-radius: 0px; padding: 8px; font-size: 14px; background-color: #0F172A; color: #F8FAFC;
+}
+QFrame#tarjeta_formulario QLineEdit:focus, QFrame#tarjeta_formulario QComboBox:focus, QFrame#tarjeta_formulario QDateEdit:focus, QFrame#tarjeta_formulario QTimeEdit:focus, QFrame#tarjeta_formulario QSpinBox:focus, QFrame#tarjeta_formulario QTextEdit:focus {
+    border: 1px solid #1E8449;
+}
+QFrame#tarjeta_formulario QComboBox QAbstractItemView {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    selection-background-color: #059669;
+    selection-color: white;
+}
+QFrame#tarjeta_formulario QCheckBox { font-size: 14px; }
+QFrame#tarjeta_formulario QCheckBox::indicator { width: 30px; height: 16px; border-radius: 0px; border: 1px solid #334155; background: #1E293B; }
+QFrame#tarjeta_formulario QCheckBox::indicator:checked { background: #059669; border: 1px solid #059669; }
+
+QPushButton#btn_siguiente, QPushButton#btn_finalizar { background-color: #059669; color: white; font-weight: bold; border-radius: 0px; padding: 10px 20px; border: none; }
+QPushButton#btn_siguiente:hover, QPushButton#btn_finalizar:hover { background-color: #047857; }
+QPushButton#btn_cancelar, QPushButton#btn_anterior { background-color: transparent; color: #94A3B8; font-weight: bold; border: 1px solid transparent; border-radius: 0px; padding: 10px 20px; }
+QPushButton#btn_cancelar:hover, QPushButton#btn_anterior:hover { background-color: #334155; color: #F1F5F9; }
+QLabel#lbl_dinamico { color: #E0E0E0; }
+
+QComboBox#combo_filtro { color: #F8FAFC; background-color: #0F172A; border: 1px solid #334155; border-radius: 4px; padding: 5px; }
+QComboBox#combo_filtro QAbstractItemView { background-color: #1E293B; color: #F8FAFC; selection-background-color: #059669; selection-color: white; border: 1px solid #334155; }
+
+/* PANEL CARPETAS (OSCURO) */
+QWidget#panel_carpetas_main { background-color: #0F172A; color: #F1F5F9; }
+QWidget#panel_carpetas_evidencias { background-color: #1E293B; }
+QFrame#pc_tarjeta_folder { background-color: #1E293B; border: 1px solid #334155; border-radius: 8px; }
+QLabel#pc_lbl_vector { color: #94A3B8; font-size: 12px; font-weight: bold; border: none; background: transparent; }
+QLabel#pc_lbl_titulo { color: #F1F5F9; font-size: 22px; font-weight: bold; border: none; background: transparent; }
+QLabel#pc_lbl_desc { color: #CBD5E1; font-size: 14px; margin-top: 10px; border: none; background: transparent; line-height: 1.4; }
+QLabel#pc_lbl_cantidad { color: #10B981; font-size: 13px; font-weight: bold; margin-top: 5px; border: none; background: transparent; }
+QPushButton#pc_btn_abrir { background-color: #334155; color: #F1F5F9; border-radius: 4px; padding: 8px 16px; font-weight: bold; border: 1px solid #475569; }
+QPushButton#pc_btn_abrir:hover { background-color: #475569; }
+QLabel#pc_lbl_cat { font-size: 18px; font-weight: bold; color: #F1F5F9; background: transparent; padding-bottom: 10px; }
+QFrame#pc_frame_card { background-color: #1E293B; border: 1px solid #334155; border-radius: 8px; }
+QFrame#pc_frame_card:hover { border: 1px solid #10B981; }
+QLabel#pc_lbl_info { border: none; color: #F1F5F9; font-size: 14px; }
+
+QWidget#panel_carpetas_main QLabel, QWidget#panel_carpetas_main QWidget { color: #F1F5F9; }
+QLabel#pc_lbl_main_titulo { font-size: 24px; font-weight: bold; background: transparent; }
+
+/* TARJETAS EXAMENES */
+QLabel#card_lbl_detalle { color: #F8FAFC; }
+QLabel#card_lbl_tiempo { color: #EF4444; }
+QLabel#card_lbl_tiempo_fin { color: #CBD5E1; }
+
+QLabel#lbl_filtrar_apelaciones { color: #F8FAFC; font-weight: bold; font-size: 14px; }
+
+/* REPORTE IA FIXES */
+QLabel#lbl_seleccionar_examen { color: #F8FAFC; font-size: 14px; font-weight: bold; }
+QLabel#titulo_veredicto, QLabel#texto_veredicto { color: #F8FAFC; }
+
+/* COMBO EXAMENES */
+
+
+
+QComboBox#combo_examenes { color: #F8FAFC; background-color: #0F172A; border: 1px solid #334155; border-radius: 4px; padding: 5px; }
+QComboBox#combo_examenes QAbstractItemView { background-color: #1E293B; color: #F8FAFC; selection-background-color: #059669; selection-color: white; border: 1px solid #334155; outline: 0px; }
+QFrame#tarjeta_formulario QComboBox, QFrame#tarjeta_formulario QTimeEdit { min-height: 25px; }
+
+/* Theme styles for Dialogs and Progress bars */
+QMessageBox, QProgressDialog {
+    background-color: #1E293B;
+}
+QMessageBox QLabel, QProgressDialog QLabel {
+    color: #E2E8F0;
+    font-size: 13px;
+}
+QMessageBox QPushButton, QProgressDialog QPushButton {
+    background-color: #005928;
+    color: white;
+    border-radius: 4px;
+    padding: 6px 15px;
+    font-weight: bold;
+}
+QMessageBox QPushButton:hover, QProgressDialog QPushButton:hover {
+    background-color: #00451f;
+}
+QProgressBar {
+    border: 1px solid #334155;
+    border-radius: 4px;
+    text-align: center;
+    color: #E2E8F0;
+    background-color: #0F172A;
+    height: 18px;
+}
+QProgressBar::chunk {
+    background-color: #10B981;
+    border-radius: 3px;
+}
+
+/* --- Chatbot Asistente Virtual ----------------------------------- */
+QDialog#ModalChatbot { background-color: #0F172A; }
+
+QFrame#chatbot_header { background-color: #005928; }
+QLabel#chatbot_header_nombre { color: white; font-size: 15px; font-weight: bold; }
+QLabel#chatbot_header_estado { color: #A8F0C6; font-size: 11px; }
+QPushButton#chatbot_btn_cerrar {
+    background: transparent; color: white;
+    font-size: 16px; border: none; border-radius: 4px;
+}
+QPushButton#chatbot_btn_cerrar:hover { background-color: rgba(255,255,255,0.15); }
+
+QFrame#chatbot_separador { background-color: #1E293B; }
+
+QScrollArea#chatbot_scroll { background-color: #0F172A; border: none; }
+QWidget#chatbot_contenedor { background-color: #0F172A; }
+
+/* Burbujas */
+QFrame#burbuja_usuario {
+    background-color: #005928; border-radius: 12px;
+    border-bottom-right-radius: 2px;
+}
+QFrame#burbuja_bot {
+    background-color: #1E293B; border-radius: 12px;
+    border-bottom-left-radius: 2px;
+    border: 1px solid #334155;
+}
+QLabel#texto_burbuja { color: #E2E8F0; font-size: 13px; background: transparent; border: none; }
+QFrame#burbuja_usuario QLabel#texto_burbuja { color: #FFFFFF; }
+
+/* Panel de opciones */
+QWidget#chatbot_panel_opciones { background-color: #0B1120; }
+QPushButton#chatbot_btn_opcion {
+    background-color: #1E293B; color: #10B981;
+    border: 1px solid #10B981; border-radius: 6px;
+    font-size: 13px; font-weight: 500;
+    text-align: left; padding-left: 12px;
+}
+QPushButton#chatbot_btn_opcion:hover { background-color: #10B981; color: #0F172A; }
+QPushButton#chatbot_btn_volver {
+    background-color: transparent; color: #64748B;
+    border: 1px solid #334155; border-radius: 6px;
+    font-size: 12px;
+    text-align: left; padding-left: 12px;
+}
+QPushButton#chatbot_btn_volver:hover { background-color: #334155; color: #E2E8F0; }
+
+/* NUEVAS TARJETAS KPIS REPORTE (DARK MODE) */
+QFrame#tarjeta_kpi_total, QFrame#tarjeta_kpi_predominante, QFrame#tarjeta_kpi_transparencia {
+    border-top: none !important;
+    background-color: #1E293B;
+    border-radius: 0px;
+    border-left: 1px solid #334155;
+    border-right: 1px solid #334155;
+    border-bottom: 1px solid #334155;
+}
+QLabel#icon_kpi_total {
+    background-color: #1E3A8A;
+    color: #93C5FD;
+    border-radius: 0px;
+    font-size: 20px;
+    font-weight: bold;
+}
+QLabel#icon_kpi_predominante {
+    background-color: #4C1D95;
+    color: #8B5CF6;
+    border-radius: 0px;
+    font-size: 20px;
+    font-weight: bold;
+}
+QLabel#icon_kpi_transparencia {
+    background-color: #064E3B;
+    color: #10B981;
+    border-radius: 0px;
+    font-size: 20px;
+    font-weight: bold;
+}
+QLabel#val_kpi_total, QLabel#val_kpi_predominante, QLabel#val_kpi_transparencia {
+    color: #F8FAFC;
+    font-size: 16px;
+    font-weight: bold;
+}
+QLabel#lbl_kpi_total, QLabel#lbl_kpi_predominante, QLabel#lbl_kpi_transparencia {
+    color: #94A3B8;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+/* MODAL DIRECTORIO COMPLETO ESTUDIANTES (DARK MODE) */
+QDialog#ModalEstudiantesReporte { background-color: #0F172A; }
+QLabel#titulo_directorio { color: #F8FAFC; }
+QLabel#subtitulo_directorio { color: #94A3B8; }
+QPushButton#btn_cerrar_directorio {
+    background-color: transparent;
+    border: none;
+    color: #94A3B8;
+    font-size: 16px;
+    font-weight: bold;
+}
+QPushButton#btn_cerrar_directorio:hover { color: #EF4444; }
+
+QLineEdit#input_buscar_directorio {
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 6px 12px;
+    background-color: #1E293B;
+    color: #F8FAFC;
+    font-size: 13px;
+}
+QLineEdit#input_buscar_directorio:focus {
+    border: 1px solid #10B981;
+    background-color: #1E293B;
+}
+
+QPushButton#chip_filtro {
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 6px 12px;
+    background-color: #1E293B;
+    color: #F8FAFC;
+    font-size: 12px;
+    font-weight: bold;
+}
+QPushButton#chip_filtro:hover { background-color: #334155; }
+QPushButton#chip_filtro[activo="true"] {
+    background-color: #059669;
+    color: #FFFFFF;
+    border: 1px solid #047857;
+}
+
+QTableWidget#tabla_directorio_estudiantes {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    gridline-color: #334155;
+}
+QTableWidget#tabla_directorio_estudiantes::item {
+    color: #F8FAFC;
+    padding: 6px;
+}
+QTableWidget#tabla_directorio_estudiantes::item:selected {
+    background-color: #334155;
+    color: #10B981;
+}
+QTableWidget#tabla_directorio_estudiantes QHeaderView::section {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    font-weight: bold;
+    padding: 8px;
+    border: none;
+    border-bottom: 2px solid #334155;
+}
+
+QPushButton#btn_ver_evidencias_modal {
+    background-color: #059669;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    padding: 4px 12px;
+    min-width: 125px;
+    font-size: 12px;
+}
+QPushButton#btn_ver_evidencias_modal:hover { background-color: #047857; }
+
+QPushButton#btn_ver_todos_estudiantes {
+    background-color: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    color: #10B981;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 8px 16px;
+}
+QPushButton#btn_ver_todos_estudiantes:hover {
+    background-color: #334155;
+    border-color: #10B981;
+}
+QLabel#badge_veredicto_modelo {
+    background-color: #1E3A8A;
+    color: #93C5FD;
+    border-radius: 4px;
+    padding: 4px 10px;
+    border: 1px solid #2563EB;
+}
+QLabel#badge_veredicto_riesgo {
+    background-color: #78350F;
+    color: #FDE68A;
+    border-radius: 4px;
+    padding: 4px 10px;
+    border: 1px solid #D97706;
+}
+
+/* SELECTOR DE REINTENTOS (PANEL CARPETAS - TEMA OSCURO) */
+QWidget#widget_selector_intentos {
+    background: transparent;
+}
+QLabel#lbl_seleccionar_intento {
+    color: #F1F5F9;
+    font-size: 13px;
+    font-weight: bold;
+}
+QComboBox#combo_intentos {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+QComboBox#combo_intentos:hover {
+    border-color: #10B981;
+}
+QComboBox#combo_intentos::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 25px;
+    border-left: none;
+}
+QComboBox#combo_intentos QAbstractItemView {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    selection-background-color: #059669;
+    selection-color: #FFFFFF;
+    border: 1px solid #334155;
+    outline: none;
+}

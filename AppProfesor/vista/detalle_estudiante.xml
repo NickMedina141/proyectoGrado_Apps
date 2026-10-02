@@ -1,0 +1,1626 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+
+<ui version="4.0">
+
+
+
+
+
+ <class>DetalleEstudiante</class>
+
+
+
+
+
+ <widget class="QWidget" name="DetalleEstudiante">
+
+
+
+
+
+ <property name="geometry">
+
+
+
+
+
+  <rect>
+
+
+
+
+
+  <x>0</x>
+
+
+
+
+
+  <y>0</y>
+
+
+
+
+
+  <width>1100</width>
+
+
+
+
+
+  <height>750</height>
+
+
+
+
+
+  </rect>
+
+
+
+
+
+ </property>
+
+
+
+
+
+ 
+
+
+
+
+
+ <layout class="QVBoxLayout" name="layout_principal">
+
+
+
+
+
+  <property name="spacing"><number>20</number></property>
+
+
+
+
+
+  <property name="leftMargin"><number>30</number></property>
+
+
+
+
+
+  <property name="topMargin"><number>30</number></property>
+
+
+
+
+
+  <property name="rightMargin"><number>30</number></property>
+
+
+
+
+
+  <property name="bottomMargin"><number>30</number></property>
+
+
+
+
+
+
+
+
+
+
+
+  <!-- HEADER -->
+
+
+
+
+
+  <item>
+
+
+
+
+
+  <layout class="QHBoxLayout" name="layout_cabecera">
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <widget class="QPushButton" name="btn_volver">
+
+
+
+
+
+    <property name="text"><string>← Sala de supervisión</string></property>
+
+
+
+
+
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+
+
+
+
+
+    <property name="styleSheet"><string>border: none; color: #555; font-size: 14px;</string></property>
+
+
+
+
+
+   </widget>
+
+
+
+
+
+   </item>
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <spacer>
+
+
+
+
+
+    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+
+
+
+
+
+    <property name="sizeType"><enum>QSizePolicy::Fixed</enum></property>
+
+
+
+
+
+    <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+
+
+
+
+
+   </spacer>
+
+
+
+
+
+   </item>
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <layout class="QVBoxLayout">
+
+
+
+
+
+    <item>
+
+
+
+
+
+    <layout class="QHBoxLayout">
+
+
+
+
+
+     <item>
+
+
+
+
+
+     <widget class="QLabel" name="lbl_nombre_estudiante">
+
+
+
+
+
+      <property name="text"><string>Estudiante</string></property>
+
+
+
+
+
+      <property name="font"><font><family>Segoe UI</family><pointsize>18</pointsize><bold>true</bold></font></property>
+
+
+
+
+
+     </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+     <item>
+
+
+
+
+
+     <widget class="QLabel" name="badge_envivo">
+
+
+
+
+
+      <property name="text"><string>EN VIVO</string></property>
+
+
+
+
+
+      <property name="styleSheet"><string>background-color: #E74C3C; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;</string></property>
+
+
+
+
+
+     </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+     <item>
+
+
+
+
+
+     <spacer>
+
+
+
+
+
+      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+
+
+
+
+
+      <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+
+
+
+
+
+     </spacer>
+
+
+
+
+
+     </item>
+
+
+
+
+
+    </layout>
+
+
+
+
+
+    </item>
+
+
+
+
+
+    <item>
+
+
+
+
+
+    <widget class="QLabel" name="lbl_subtitulo">
+
+
+
+
+
+     <property name="text"><string>Evaluación en curso</string></property>
+
+
+
+
+
+     <property name="styleSheet"><string>color: #7F8C8D; font-size: 14px;</string></property>
+
+
+
+
+
+    </widget>
+
+
+
+
+
+    </item>
+
+
+
+
+
+   </layout>
+
+
+
+
+
+   </item>
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <spacer>
+
+
+
+
+
+    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+
+
+
+
+
+    <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+
+
+
+
+
+   </spacer>
+
+
+
+
+
+   </item>
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <widget class="QPushButton" name="btn_marcar_fraude">
+
+
+
+
+
+    <property name="text"><string>Marcar Fraude</string></property>
+
+
+
+
+
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+
+
+
+
+
+    <property name="minimumSize"><size><width>150</width><height>40</height></size></property>
+
+
+
+
+
+    <property name="styleSheet"><string>background-color: #E74C3C; color: white; border-radius: 0px; font-weight: bold; font-size: 13px;</string></property>
+
+
+
+
+
+   </widget>
+
+
+
+
+
+   </item>
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <widget class="QPushButton" name="btn_microfono"> <property name="text"><string>🎙 Microfono</string></property> <property name="minimumSize"><size><width>140</width><height>40</height></size></property> <property name="styleSheet"><string>background-color: #34495E; color: white; border-radius: 0px; font-weight: bold; font-size: 13px;</string></property> </widget> </item> <item> <widget class="QPushButton" name="btn_advertencia">
+
+
+
+
+
+    <property name="text"><string>Enviar Advertencia</string></property>
+
+
+
+
+
+    <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+
+
+
+
+
+    <property name="minimumSize"><size><width>170</width><height>40</height></size></property>
+
+
+
+
+
+    <property name="styleSheet"><string>background-color: #27AE60; color: white; border-radius: 0px; font-weight: bold; font-size: 13px;</string></property>
+
+
+
+
+
+   </widget>
+
+
+
+
+
+   </item>
+
+
+
+
+
+  </layout>
+
+
+
+
+
+  </item>
+
+
+
+
+
+
+
+
+
+
+
+  <item>
+
+
+
+
+
+  <widget class="Line" name="linea_divisoria">
+
+
+
+
+
+   <property name="orientation"><enum>Qt::Horizontal</enum></property>
+
+
+
+
+
+   <property name="styleSheet"><string>color: #E0E0E0;</string></property>
+
+
+
+
+
+  </widget>
+
+
+
+
+
+  </item>
+
+
+
+
+
+
+
+
+
+
+
+  <!-- BODY -->
+
+
+
+
+
+  <item>
+
+
+
+
+
+  <layout class="QHBoxLayout" name="layout_cuerpo">
+
+
+
+
+
+   <property name="spacing"><number>20</number></property>
+
+
+
+
+
+   
+
+
+
+
+
+   <!-- COLUMNA IZQUIERDA: VIDEO FEED -->
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <widget class="QFrame" name="frame_video">
+
+
+
+
+
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>6</horstretch><verstretch>0</verstretch></sizepolicy></property>
+
+
+
+
+
+    <property name="styleSheet"><string>background-color: #D6DAD6; border-radius: 0px;</string></property>
+
+
+
+
+
+    <layout class="QVBoxLayout">
+
+
+
+
+
+    <item>
+
+
+
+
+
+     <widget class="QLabel" name="lbl_video_placeholder">
+
+
+
+
+
+     <property name="text"><string>Transmisión de Cámara en Vivo</string></property>
+
+
+
+
+
+     <property name="alignment"><set>Qt::AlignCenter</set></property>
+
+
+
+
+
+     <property name="styleSheet"><string>color: #555; font-size: 18px;</string></property>
+
+
+
+
+
+     </widget>
+
+
+
+
+
+    </item>
+
+
+
+
+
+    </layout>
+
+
+
+
+
+   </widget>
+
+
+
+
+
+   </item>
+
+
+
+
+
+
+
+
+
+
+
+   <!-- COLUMNA DERECHA: METRICAS Y ALERTAS -->
+
+
+
+
+
+   <item>
+
+
+
+
+
+   <widget class="QWidget" name="contenedor_derecho">
+
+
+
+
+
+    <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>4</horstretch><verstretch>0</verstretch></sizepolicy></property>
+
+
+
+
+
+    <layout class="QVBoxLayout" name="layout_derecha">
+
+
+
+
+
+    <property name="spacing"><number>20</number></property>
+
+
+
+
+
+    <property name="leftMargin"><number>0</number></property>
+
+
+
+
+
+    <property name="topMargin"><number>0</number></property>
+
+
+
+
+
+    <property name="rightMargin"><number>0</number></property>
+
+
+
+
+
+    <property name="bottomMargin"><number>0</number></property>
+
+
+
+
+
+    
+
+
+
+
+
+    <!-- TARJETA MÉTRICAS (Resumen de Sesión) -->
+
+
+
+
+
+    <item>
+
+
+
+
+
+    <widget class="QFrame" name="tarjeta_metricas">
+
+
+
+
+
+     <property name="styleSheet"><string>background-color: white; border: 1px solid #E0E0E0; border-radius: 0px;</string></property>
+
+
+
+
+
+     <layout class="QVBoxLayout" name="layout_metricas">
+
+
+
+
+
+     <property name="spacing"><number>15</number></property>
+
+
+
+
+
+     <property name="leftMargin"><number>20</number></property>
+
+
+
+
+
+     <property name="topMargin"><number>20</number></property>
+
+
+
+
+
+     <property name="rightMargin"><number>20</number></property>
+
+
+
+
+
+     <property name="bottomMargin"><number>20</number></property>
+
+
+
+
+
+     <item>
+
+
+
+
+
+      <widget class="QLabel" name="titulo_metricas">
+
+
+
+
+
+      <property name="text"><string>Resumen de Sesión</string></property>
+
+
+
+
+
+      <property name="font"><font><family>Segoe UI</family><pointsize>14</pointsize><bold>true</bold></font></property>
+
+
+
+
+
+      <property name="styleSheet"><string>border: none;</string></property>
+
+
+
+
+
+      </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+     <item><widget class="Line"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="styleSheet"><string>border: none; background-color: #E0E0E0;</string></property></widget></item>
+
+
+
+
+
+     
+
+
+
+
+
+     <item>
+
+
+
+
+
+      <widget class="QFrame" name="item_metrica_1">
+
+
+
+
+
+      <property name="styleSheet"><string>border: none; border-bottom: 1px solid #F0F0F0; border-radius: 0px;</string></property>
+
+
+
+
+
+      <layout class="QHBoxLayout">
+
+
+
+
+
+       <property name="leftMargin"><number>0</number></property><property name="rightMargin"><number>0</number></property>
+
+
+
+
+
+       <item>
+
+
+
+
+
+       <widget class="QLabel" name="lm1_tit">
+
+
+
+
+
+        <property name="text"><string>Nivel de Riesgo (IA)</string></property>
+
+
+
+
+
+        <property name="styleSheet"><string>color: #333; font-size: 13px;</string></property>
+
+
+
+
+
+       </widget>
+
+
+
+
+
+       </item>
+
+
+
+
+
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+
+
+
+
+
+       <item>
+
+
+
+
+
+       <widget class="QLabel" name="badge_riesgo">
+
+
+
+
+
+        <property name="text"><string>Bajo</string></property>
+
+
+
+
+
+        <property name="styleSheet"><string>color: #27AE60; font-weight: bold;</string></property>
+
+
+
+
+
+       </widget>
+
+
+
+
+
+       </item>
+
+
+
+
+
+      </layout>
+
+
+
+
+
+      </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+
+
+
+
+
+
+     <item>
+
+
+
+
+
+      <widget class="QFrame" name="item_metrica_2">
+
+
+
+
+
+      <property name="styleSheet"><string>border: none; border-bottom: 1px solid #F0F0F0; border-radius: 0px;</string></property>
+
+
+
+
+
+      <layout class="QHBoxLayout">
+
+
+
+
+
+       <property name="leftMargin"><number>0</number></property><property name="rightMargin"><number>0</number></property>
+
+
+
+
+
+       <item>
+
+
+
+
+
+       <widget class="QLabel" name="lm2_tit">
+
+
+
+
+
+        <property name="text"><string>Total de Alertas</string></property>
+
+
+
+
+
+        <property name="styleSheet"><string>color: #333; font-size: 13px;</string></property>
+
+
+
+
+
+       </widget>
+
+
+
+
+
+       </item>
+
+
+
+
+
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+
+
+
+
+
+       <item>
+
+
+
+
+
+       <widget class="QLabel" name="badge_alertas">
+
+
+
+
+
+        <property name="text"><string>0</string></property>
+
+
+
+
+
+        <property name="styleSheet"><string>color: #333; font-weight: bold; font-size: 16px;</string></property>
+
+
+
+
+
+       </widget>
+
+
+
+
+
+       </item>
+
+
+
+
+
+      </layout>
+
+
+
+
+
+      </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+     
+
+
+
+
+
+     <item>
+
+
+
+
+
+      <widget class="QFrame" name="item_metrica_3">
+
+
+
+
+
+      <property name="styleSheet"><string>border: none;</string></property>
+
+
+
+
+
+      <layout class="QHBoxLayout">
+
+
+
+
+
+       <property name="leftMargin"><number>0</number></property><property name="rightMargin"><number>0</number></property>
+
+
+
+
+
+       <item>
+
+
+
+
+
+       <widget class="QLabel" name="lm3_tit">
+
+
+
+
+
+        <property name="text"><string>Calidad de Conexión</string></property>
+
+
+
+
+
+        <property name="styleSheet"><string>color: #333; font-size: 13px;</string></property>
+
+
+
+
+
+       </widget>
+
+
+
+
+
+       </item>
+
+
+
+
+
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+
+
+
+
+
+       <item>
+
+
+
+
+
+       <widget class="QLabel" name="badge_conexion">
+
+
+
+
+
+        <property name="text"><string>Estable</string></property>
+
+
+
+
+
+        <property name="styleSheet"><string>color: #27AE60; font-weight: bold;</string></property>
+
+
+
+
+
+       </widget>
+
+
+
+
+
+       </item>
+
+
+
+
+
+      </layout>
+
+
+
+
+
+      </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+
+
+
+
+
+
+     </layout>
+
+
+
+
+
+    </widget>
+
+
+
+
+
+    </item>
+
+
+
+
+
+
+
+
+
+
+
+    <!-- TARJETA HISTORIAL DE ALERTAS -->
+
+
+
+
+
+    <item>
+
+
+
+
+
+    <widget class="QFrame" name="tarjeta_historial">
+
+
+
+
+
+     <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+
+
+
+
+
+     <property name="styleSheet"><string>background-color: white; border: 1px solid #E0E0E0; border-radius: 0px;</string></property>
+
+
+
+
+
+     <layout class="QVBoxLayout" name="layout_historial">
+
+
+
+
+
+     <property name="spacing"><number>15</number></property>
+
+
+
+
+
+     <property name="leftMargin"><number>20</number></property>
+
+
+
+
+
+     <property name="topMargin"><number>20</number></property>
+
+
+
+
+
+     <property name="rightMargin"><number>20</number></property>
+
+
+
+
+
+     <property name="bottomMargin"><number>20</number></property>
+
+
+
+
+
+     <item>
+
+
+
+
+
+      <widget class="QLabel" name="titulo_historial">
+
+
+
+
+
+      <property name="text"><string>Historial de Alertas</string></property>
+
+
+
+
+
+      <property name="font"><font><family>Segoe UI</family><pointsize>14</pointsize><bold>true</bold></font></property>
+
+
+
+
+
+      <property name="styleSheet"><string>border: none; color: #E74C3C;</string></property>
+
+
+
+
+
+      </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+     <item><widget class="Line"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="styleSheet"><string>border: none; background-color: #E0E0E0;</string></property></widget></item>
+
+
+
+
+
+
+
+
+
+
+
+     <item>
+
+
+
+
+
+      <widget class="QScrollArea" name="scroll_historial">
+
+
+
+
+
+      <property name="widgetResizable"><bool>true</bool></property>
+
+
+
+
+
+      <property name="styleSheet"><string>border: none; background: transparent;</string></property>
+
+
+
+
+
+      <widget class="QWidget" name="contenido_historial">
+
+
+
+
+
+       <layout class="QVBoxLayout" name="lista_alertas">
+
+
+
+
+
+       <property name="alignment"><set>Qt::AlignTop</set></property>
+
+
+
+
+
+       <property name="spacing"><number>10</number></property>
+
+
+
+
+
+       </layout>
+
+
+
+
+
+      </widget>
+
+
+
+
+
+      </widget>
+
+
+
+
+
+     </item>
+
+
+
+
+
+     </layout>
+
+
+
+
+
+    </widget>
+
+
+
+
+
+    </item>
+
+
+
+
+
+    </layout>
+
+
+
+
+
+   </widget>
+
+
+
+
+
+   </item>
+
+
+
+
+
+  </layout>
+
+
+
+
+
+  </item>
+
+
+
+
+
+
+
+
+
+
+
+ </layout>
+
+
+
+
+
+ </widget>
+
+
+
+
+
+ <resources/>
+
+
+
+
+
+ <connections/>
+
+
+
+
+
+</ui>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
