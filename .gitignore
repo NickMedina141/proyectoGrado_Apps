@@ -28,6 +28,8 @@ python-3.12.10-amd64.exe
 *.exe
 *.lnk
 yolo11m.pt
+yolo11s.pt
+yolo11n.pt
 AppSegurity/
 
 # Logs y temporales

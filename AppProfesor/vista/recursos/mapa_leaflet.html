@@ -66,6 +66,24 @@
         .popup-header.morado { background: linear-gradient(135deg, #6c3483, #8e44ad); }
         .popup-header.alerta { background: linear-gradient(135deg, #922b21, #c0392b); }
 
+        /* Boton de cerrar popup en blanco nítido */
+        .leaflet-container a.leaflet-popup-close-button,
+        .leaflet-popup-close-button {
+            color: #ffffff !important;
+            padding: 8px 10px 0 0 !important;
+            font-size: 18px !important;
+            font-weight: 700 !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+            opacity: 0.95;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        .leaflet-container a.leaflet-popup-close-button:hover,
+        .leaflet-popup-close-button:hover {
+            color: #ffffff !important;
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
         .popup-body {
             padding: 12px 14px;
             max-height: 250px;
@@ -142,7 +160,7 @@
             font-size: 12px;
             z-index: 1000;
             color: #2c3e50;
-            max-width: 260px;
+            max-width: 270px;
             border: 1px solid rgba(0,0,0,0.08);
         }
         .legend-title {
@@ -184,20 +202,20 @@
             padding-top: 5px;
         }
 
-        /* Hover Tooltip */
+        /* Hover Tooltip - Estilo Blanco Limpio */
         .pin-hover-tooltip {
-            background-color: #2c3e50;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            padding: 4px 9px;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
-            white-space: nowrap;
+            background-color: #ffffff !important;
+            color: #1a252f !important;
+            border: 1px solid rgba(0, 0, 0, 0.16) !important;
+            border-radius: 6px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            padding: 5px 10px !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
+            white-space: nowrap !important;
         }
         .pin-hover-tooltip::before {
-            border-top-color: #2c3e50 !important;
+            border-top-color: #ffffff !important;
         }
 
         /* Trajectory Label Tooltip */
@@ -225,10 +243,10 @@
 
     <div class="map-legend">
         <div class="legend-title">🗺️ Supervisión GPS</div>
-        <div class="legend-item"><span class="legend-dot dot-verde"></span> En curso (Intento activo)</div>
+        <div class="legend-item"><span class="legend-dot dot-verde"></span> En curso (Examen activo)</div>
         <div class="legend-item"><span class="legend-dot dot-azul"></span> Finalizado / Historial</div>
-        <div class="legend-item"><span class="legend-dot dot-morado"></span> Aula Presencial (≥ 4 alumnos)</div>
-        <div class="legend-item"><span class="legend-dot dot-rojo"></span> Alerta Proximidad (2-3 alumnos)</div>
+        <div class="legend-item"><span class="legend-dot dot-morado"></span> Aula Presencial (≥ 10 alumnos)</div>
+        <div class="legend-item"><span class="legend-dot dot-rojo"></span> Ubicación compartida (2 - 9 alumnos)</div>
         <div class="legend-tip">💡 <i>Pasa el cursor para ver el nombre o haz clic para ver detalles y trazabilidad.</i></div>
     </div>
 
@@ -346,10 +364,10 @@
                 colorClase = 'morado';
                 tituloHeader = 'Aula Presencial (' + pin.cantidadAlumnos + ' alumnos)';
                 iconoHeader = '🏫';
-            } else if (cat === 'PROXIMIDAD_SOSPECHOSA') {
-                colorClase = 'alerta';
-                tituloHeader = 'Alerta: Misma Ubicación (' + pin.cantidadAlumnos + ')';
-                iconoHeader = '⚠️';
+            } else if (cat === 'UBICACION_COMPARTIDA' || cat === 'PROXIMIDAD_SOSPECHOSA') {
+                colorClase = pin.color === 'rojo' ? 'alerta' : 'morado';
+                tituloHeader = 'Ubicación Compartida (' + pin.cantidadAlumnos + ' alumnos)';
+                iconoHeader = '📍';
             } else if (cat === 'HISTORICO') {
                 colorClase = 'azul';
                 tituloHeader = 'Intento Finalizado (Histórico)';
@@ -360,17 +378,17 @@
                        '<span>' + iconoHeader + ' ' + tituloHeader + '</span>' +
                        '</div><div class="popup-body">';
 
-            if (cat === 'PROXIMIDAD_SOSPECHOSA') {
-                html += '<div style="font-size:11px; background:#fadbd8; color:#78281f; padding:5px 8px; border-radius:4px; margin-bottom:8px;">' +
-                        '<b>Aviso de Proximidad:</b> Alumnos coinciden exactamente en coordenadas geográficas e IP.</div>';
+            if (cat === 'UBICACION_COMPARTIDA' || cat === 'PROXIMIDAD_SOSPECHOSA') {
+                html += '<div style="font-size:11.5px; background:#fadbd8; color:#78281f; padding:6px 9px; border-radius:4px; margin-bottom:8px;">' +
+                        '<b>Aviso:</b> ' + pin.cantidadAlumnos + ' estudiantes detectados en la misma coordenada física / red.</div>';
             }
 
             items.forEach(function(item) {
                 var estadoRaw = (item.estado || '').toUpperCase();
                 var badgeEstado = '';
-                if (estadoRaw === 'EN_CURSO') {
+                if (estadoRaw === 'EN_CURSO' || estadoRaw === 'INICIADA' || estadoRaw === 'ACTIVA') {
                     badgeEstado = '<span class="badge badge-activo">En Curso</span>';
-                } else if (estadoRaw === 'EXPULSADO') {
+                } else if (estadoRaw === 'EXPULSADO' || estadoRaw === 'ANULADA') {
                     badgeEstado = '<span class="badge badge-expulsado">Expulsado</span>';
                 } else {
                     badgeEstado = '<span class="badge badge-finalizado">Finalizado</span>';
@@ -450,8 +468,8 @@
                     colorHex = '#8E44AD';
                     badgeText = pin.cantidadAlumnos > 99 ? '99+' : pin.cantidadAlumnos.toString();
                     iconoTipo = null;
-                } else if (pin.categoria === 'PROXIMIDAD_SOSPECHOSA') {
-                    colorHex = (pin.color === 'rojo') ? '#C0392B' : '#8E44AD';
+                } else if (pin.categoria === 'UBICACION_COMPARTIDA' || pin.categoria === 'PROXIMIDAD_SOSPECHOSA') {
+                    colorHex = '#C0392B';
                     badgeText = pin.cantidadAlumnos.toString();
                     iconoTipo = 'alerta';
                 } else if (pin.categoria === 'HISTORICO') {
@@ -462,12 +480,12 @@
                 var icon = crearPinSVG(colorHex, badgeText, iconoTipo);
                 var m = L.marker([pin.lat, pin.lon], { icon: icon }).addTo(map);
 
-                // Tooltip al pasar el cursor (Hover)
+                // Tooltip al pasar el cursor (Hover) - Blanco nítido
                 var textoHover = '';
                 if (pin.categoria === 'AULA_PRESENCIAL') {
                     textoHover = '🏫 Aula Presencial (' + pin.cantidadAlumnos + ' alumnos)';
-                } else if (pin.categoria === 'PROXIMIDAD_SOSPECHOSA') {
-                    textoHover = '⚠️ Misma Ubicación (' + pin.cantidadAlumnos + ' alumnos)';
+                } else if (pin.categoria === 'UBICACION_COMPARTIDA' || pin.categoria === 'PROXIMIDAD_SOSPECHOSA') {
+                    textoHover = '📍 Ubicación Compartida (' + pin.cantidadAlumnos + ' alumnos)';
                 } else {
                     var ultItem = pin.items && pin.items.length > 0 ? pin.items[pin.items.length - 1] : null;
                     if (ultItem) {

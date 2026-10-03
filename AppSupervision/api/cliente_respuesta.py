@@ -118,7 +118,9 @@ class ClienteApi:
     import socket
     import psutil
     
-    # 1. Detección de Sistema Operativo
+    # 1. Detección y Bloqueo de Sistema Operativo No Soportado
+    if platform.system().lower() != "windows":
+        return False, "Acceso denegado: El sistema de supervisión actualmente solo es compatible con entornos Windows oficiales."
     os_info = f"{platform.system()} {platform.release()}"
     
     # 2. Detección de IP Local
@@ -130,9 +132,13 @@ class ClienteApi:
     except Exception:
         ip_local = "Desconocida"
         
-    # 3. Detección de VPN
+    # 3. Detección Reforzada de VPN
     vpn_activa = False
-    interfaces_vpn = ['tun', 'tap', 'vpn', 'wireguard', 'nord', 'openvpn', 'cisco', 'proton', 'zerotier', 'wg']
+    interfaces_vpn = [
+        'tun', 'tap', 'vpn', 'wireguard', 'nord', 'openvpn', 'cisco',
+        'proton', 'zerotier', 'wg', 'tailscale', 'warp', 'cloudflare',
+        'surfshark', 'hamachi', 'forti', 'anyconnect', 'paloalto', 'mullvad'
+    ]
     try:
         interfaces = psutil.net_if_addrs()
         stats = psutil.net_if_stats()
@@ -331,6 +337,13 @@ class HiloStreamEstudiante(QThread):
     self.ws = None
     self.corriendo = True
     self.streaming_activo = False
+    
+    # --- TRANSMISIÓN ASÍNCRONA FLUIDA (Cero lag, Drop-frame automático) ---
+    self._ultimo_frame_a_enviar = None
+    self._bloqueo_frame = threading.Lock()
+    self._hilo_emisor = threading.Thread(target=self._bucle_emision_streaming, daemon=True)
+    self._hilo_emisor.start()
+    
     print(f"[WS-ESTUDIANTE] Hilo preparado con sesion ID: '{self.sesion_id}'")
 
   def run(self):
@@ -396,23 +409,54 @@ class HiloStreamEstudiante(QThread):
         pass
 
   def enviar_frame_stream(self, base64_str):
-    if self.corriendo and self.streaming_activo and self.ws and self.ws.sock and self.ws.sock.connected:
-      destino = f"/topic/stream/{self.sesion_id}"
-      
-      # --- CIFRADO E2EE AES-256 EN STREAMING ---
-      try:
-          from cryptography.fernet import Fernet
-          from config.configuracion import AES_SECRET_KEY
-          f_crypto = Fernet(AES_SECRET_KEY)
-          base64_str = f_crypto.encrypt(base64_str.encode('utf-8')).decode('utf-8')
-      except Exception as e:
-          pass # Fallback a texto claro si falla la clave
-          
-      payload = {"frameBase64": base64_str}
-      cuerpo = json.dumps(payload)
-      longitud = len(cuerpo.encode('utf-8'))
-      frame = f"SEND\ndestination:{destino}\ncontent-type:application/json\ncontent-length:{longitud}\n\n{cuerpo}\x00"
-      self.ws.send(frame)
+    """
+    Recibe el frame desde la cámara y lo deposita en el buffer de tamaño 1.
+    Ejecución instantánea (0.001ms) sin bloquear la cámara ni la IA.
+    Si la red está ocupada, descarta fotogramas viejos automáticamente.
+    """
+    if self.corriendo and self.streaming_activo:
+      with self._bloqueo_frame:
+        self._ultimo_frame_a_enviar = base64_str
+
+  def _bucle_emision_streaming(self):
+    """
+    Hilo en segundo plano dedicado exclusivamente a emitir el frame más reciente
+    hacia el profesor vía WebSocket STOMP con cifrado E2EE.
+    """
+    import time
+    from cryptography.fernet import Fernet
+    from config.configuracion import AES_SECRET_KEY
+    try:
+        f_crypto = Fernet(AES_SECRET_KEY)
+    except Exception:
+        f_crypto = None
+
+    while self.corriendo:
+        frame_a_transmitir = None
+        if self.streaming_activo and self.ws and getattr(self.ws, 'sock', None) and self.ws.sock.connected:
+            with self._bloqueo_frame:
+                frame_a_transmitir = self._ultimo_frame_a_enviar
+                self._ultimo_frame_a_enviar = None
+
+        if frame_a_transmitir:
+            try:
+                # Cifrado E2EE ultra-rápido en frame liviano
+                if f_crypto:
+                    try:
+                        frame_a_transmitir = f_crypto.encrypt(frame_a_transmitir.encode('utf-8')).decode('utf-8')
+                    except Exception:
+                        pass
+                        
+                destino = f"/topic/stream/{self.sesion_id}"
+                payload = {"frameBase64": frame_a_transmitir}
+                cuerpo = json.dumps(payload)
+                longitud = len(cuerpo.encode('utf-8'))
+                frame_stomp = f"SEND\ndestination:{destino}\ncontent-type:application/json\ncontent-length:{longitud}\n\n{cuerpo}\x00"
+                self.ws.send(frame_stomp)
+            except Exception:
+                pass
+        
+        time.sleep(0.04) # ~25 revisiones/segundo para emisión inmediata y suave
 
   def al_tener_error(self, ws, error):
     print(f"[WS-ESTUDIANTE] ERROR EN WEBSOCKET: {error}")
@@ -423,5 +467,7 @@ class HiloStreamEstudiante(QThread):
   def detener(self):
     self.corriendo = False
     self.streaming_activo = False
+    with self._bloqueo_frame:
+      self._ultimo_frame_a_enviar = None
     if self.ws:
       self.ws.close()

@@ -1,16 +1,29 @@
 # main.py
 import sys
 import os
-from PyQt6.QtWebEngineWidgets import QWebEngineView  # IMPORTANTE: Debe importarse antes de crear QApplication
-from PyQt6.QtWidgets import QApplication
-from vista.ventana_login import VentanaLogin
-from utils.actualizador import sincronizar_parches
+import platform
 
 if __name__ == '__main__':
-    # Sincronización silenciosa de parches desde GitHub Releases
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    if sincronizar_parches("AppProfesor", base_dir):
-        os.execl(sys.executable, sys.executable, *sys.argv)
+    # Validación estricta de Sistema Operativo Soportado (Solo Windows)
+    if platform.system().lower() != "windows":
+        print("FATAL: AppProfesor ha sido diseñada y certificada exclusivamente para sistemas operativos Windows.")
+        try:
+            from PyQt6.QtWidgets import QApplication, QMessageBox
+            _temp_app = QApplication(sys.argv)
+            QMessageBox.critical(
+                None,
+                "Sistema No Compatible",
+                "Sistema no compatible: AppProfesor ha sido diseñada y certificada exclusivamente para sistemas operativos Windows.\n\n"
+                "Para garantizar la correcta visualización del mapa GPS y la seguridad, ejecute la aplicación en Windows."
+            )
+        except Exception:
+            pass
+        sys.exit(1)
+
+    from PyQt6.QtWebEngineWidgets import QWebEngineView  # IMPORTANTE: Debe importarse antes de crear QApplication
+    from PyQt6.QtWidgets import QApplication
+    from vista.ventana_login import VentanaLogin
+    from utils.actualizador import sincronizar_parches
 
     aplicacion = QApplication(sys.argv)
     ventana = VentanaLogin()

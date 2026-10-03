@@ -1,18 +1,22 @@
 import os
 import datetime
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QPushButton, QFrame, QGridLayout, QScrollArea, QSizePolicy, QComboBox)
-from PyQt6.QtCore import Qt, QUrl, QSize, QRectF
-from PyQt6.QtGui import QFont, QColor, QPixmap, QDesktopServices, QPainter, QPen, QBrush
+                            QPushButton, QFrame, QGridLayout, QScrollArea, QSizePolicy, QComboBox)
+from PyQt6.QtCore import Qt, QUrl, QSize, QRectF, QPointF
+from PyQt6.QtGui import QFont, QColor, QPixmap, QDesktopServices, QPainter, QPen, QBrush, QPainterPath, QPolygonF, QLinearGradient
 
 class LineaDeTiempoWidget(QWidget):
-    def __init__(self, fn_abrir_categoria):
+    def __init__(self, fn_abrir_categoria, fn_abrir_archivo=None):
         super().__init__()
         self.fn_abrir_categoria = fn_abrir_categoria
-        # Altura aún mayor para que se vea espectacular sin aplastar (el scroll lo maneja)
-        self.setMinimumHeight(500)
+        self.fn_abrir_archivo = fn_abrir_archivo
+        self.setMinimumHeight(300)
+        self.setFixedHeight(310)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.eventos = []
+        self.items_render = []
+        self.hovered_idx = None
+        self.hovered_card_rect = None
         self.t_min = 0
         self.t_max = 0
         self.setMouseTracking(True)
@@ -20,6 +24,8 @@ class LineaDeTiempoWidget(QWidget):
         
     def cargar_eventos(self, ruta_evidencias):
         self.eventos.clear()
+        self.hovered_idx = None
+        self.hovered_card_rect = None
         if not ruta_evidencias:
             self.update()
             return
@@ -27,7 +33,7 @@ class LineaDeTiempoWidget(QWidget):
         mapa_carpetas = {
             'audio': ('audio', 'Audio'),
             'proceso': ('proceso', 'Procesos y Sistema'),
-            'webcam': ('webcam', 'Visión'), # Cambiado de Webcam a Visión
+            'webcam': ('webcam', 'Visión'),
             'teclado': ('teclado', 'Teclado')
         }
             
@@ -38,11 +44,7 @@ class LineaDeTiempoWidget(QWidget):
                     ruta_comp = os.path.join(ruta_cat, arch)
                     if os.path.isfile(ruta_comp):
                         ts = os.path.getmtime(ruta_comp)
-                        
-                        # Solo el tipo de alerta para que se vea limpio
                         motivo = info[1].upper()
-                        
-                        # Excepcion especial para objetos sospechosos en la categoria webcam
                         if carpeta_id == 'webcam':
                             arch_lower = arch.lower()
                             if 'objeto' in arch_lower or 'celular' in arch_lower or 'telefono' in arch_lower or 'dispositivo' in arch_lower:
@@ -53,7 +55,8 @@ class LineaDeTiempoWidget(QWidget):
                             'tipo': carpeta_id,
                             'titulo_cat': info[1],
                             'motivo': motivo,
-                            'rect': None
+                            'archivo': arch,
+                            'ruta': ruta_comp
                         })
                         
         if not self.eventos:
@@ -62,213 +65,523 @@ class LineaDeTiempoWidget(QWidget):
             
         self.eventos.sort(key=lambda x: x['time'])
         
-        # Calcular duracion real de los eventos para dar un espaciado dinamico y perfecto
         duracion_real = self.eventos[-1]['time'] - self.eventos[0]['time']
-        
-        # Darle un "padding" o margen del 10% a los lados (con un minimo de 60 segundos)
-        # Esto asegura que los eventos abarquen todo el ancho de la pantalla de manera uniforme
-        padding = max(60, duracion_real * 0.1)
+        padding = max(45, duracion_real * 0.08)
         self.t_min = self.eventos[0]['time'] - padding
         self.t_max = self.eventos[-1]['time'] + padding
-            
-        # Al no establecer MinimumWidth, el widget toma el 100% del ancho de la pantalla sin scroll
-        self.setMinimumHeight(650)
         self.update()
+
+    def _dibujar_bandera_3d_ribbon(self, painter, x, y, titulo, hora, es_inicio=True):
+        """
+        Dibuja un banderín ondeante 3D vectorial (Opción B):
+        - Mástil metálico con esfera dorada/plateada en la punta.
+        - Tela ondeante con corte de cola de golondrina y pliegue de sombra 3D.
+        - Cápsula flotante minimalista con rótulo y hora tabular.
+        """
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # 1. Base / Ancla sobre el carril central
+        painter.setPen(QPen(QColor('#FFFFFF'), 2))
+        painter.setBrush(QBrush(QColor('#10B981' if es_inicio else '#059669')))
+        painter.drawEllipse(QPointF(x, y), 6, 6)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor('#FFFFFF')))
+        painter.drawEllipse(QPointF(x - 1.5, y - 1.5), 1.8, 1.8)
+        
+        # 2. Mástil metálico redondeado
+        y_mastil_top = y - 44
+        painter.setPen(QPen(QColor('#94A3B8'), 2.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.drawLine(int(x), int(y - 5), int(x), int(y_mastil_top + 3))
+        painter.setPen(QPen(QColor('#F1F5F9'), 1.1, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.drawLine(int(x - 0.5), int(y - 5), int(x - 0.5), int(y_mastil_top + 3))
+        
+        # 3. Pomo / Esfera en la punta superior
+        grad_pomo = QLinearGradient(x - 3, y_mastil_top - 3, x + 3, y_mastil_top + 3)
+        if es_inicio:
+            grad_pomo.setColorAt(0.0, QColor('#FDE68A'))
+            grad_pomo.setColorAt(0.5, QColor('#F59E0B'))
+            grad_pomo.setColorAt(1.0, QColor('#B45309'))
+        else:
+            grad_pomo.setColorAt(0.0, QColor('#A7F3D0'))
+            grad_pomo.setColorAt(0.5, QColor('#10B981'))
+            grad_pomo.setColorAt(1.0, QColor('#047857'))
+            
+        painter.setPen(QPen(QColor('#78350F' if es_inicio else '#064E3B'), 0.8))
+        painter.setBrush(QBrush(grad_pomo))
+        painter.drawEllipse(QPointF(x, y_mastil_top), 3.5, 3.5)
+        
+        # 4. Banderín Ondeante 3D con corte de cola de golondrina
+        dir_flag = 1 if es_inicio else -1
+        p_mast_top = QPointF(x, y_mastil_top + 4)
+        p_mast_bot = QPointF(x, y_mastil_top + 26)
+        tip_top = QPointF(x + (dir_flag * 27), y_mastil_top + 2)
+        inner_notch = QPointF(x + (dir_flag * 19), y_mastil_top + 15)
+        tip_bot = QPointF(x + (dir_flag * 27), y_mastil_top + 27)
+        
+        path_flag = QPainterPath()
+        path_flag.moveTo(p_mast_top)
+        path_flag.cubicTo(
+            x + (dir_flag * 8), y_mastil_top + 1,
+            x + (dir_flag * 17), y_mastil_top + 5,
+            tip_top.x(), tip_top.y()
+        )
+        path_flag.lineTo(inner_notch)
+        path_flag.lineTo(tip_bot)
+        path_flag.cubicTo(
+            x + (dir_flag * 17), y_mastil_top + 31,
+            x + (dir_flag * 8), y_mastil_top + 24,
+            p_mast_bot.x(), p_mast_bot.y()
+        )
+        path_flag.closeSubpath()
+        
+        # Sombra suave de la bandera
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor(15, 23, 42, 20)))
+        path_sombra = QPainterPath(path_flag)
+        painter.drawPath(path_sombra.translated(dir_flag * 1.5, 2.5))
+        
+        # Relleno con gradiente institucional
+        grad_flag = QLinearGradient(p_mast_top, tip_top)
+        if es_inicio:
+            grad_flag.setColorAt(0.0, QColor('#059669'))
+            grad_flag.setColorAt(0.4, QColor('#10B981'))
+            grad_flag.setColorAt(0.7, QColor('#34D399'))
+            grad_flag.setColorAt(1.0, QColor('#059669'))
+        else:
+            grad_flag.setColorAt(0.0, QColor('#047857'))
+            grad_flag.setColorAt(0.4, QColor('#059669'))
+            grad_flag.setColorAt(0.7, QColor('#10B981'))
+            grad_flag.setColorAt(1.0, QColor('#065F46'))
+            
+        painter.setPen(QPen(QColor('#064E3B'), 1.2))
+        painter.setBrush(QBrush(grad_flag))
+        painter.drawPath(path_flag)
+        
+        # Pliegue 3D de sombra en la tela
+        path_pliegue = QPainterPath()
+        path_pliegue.moveTo(x + (dir_flag * 11), y_mastil_top + 3.5)
+        path_pliegue.cubicTo(
+            x + (dir_flag * 13), y_mastil_top + 13,
+            x + (dir_flag * 9), y_mastil_top + 19,
+            x + (dir_flag * 12), y_mastil_top + 26
+        )
+        path_pliegue.lineTo(x + (dir_flag * 16), y_mastil_top + 27)
+        path_pliegue.cubicTo(
+            x + (dir_flag * 13), y_mastil_top + 19,
+            x + (dir_flag * 17), y_mastil_top + 13,
+            x + (dir_flag * 15), y_mastil_top + 3
+        )
+        path_pliegue.closeSubpath()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor(0, 0, 0, 30)))
+        painter.drawPath(path_pliegue)
+        
+        # Brillo de cresta
+        painter.setPen(QPen(QColor(255, 255, 255, 85), 1.2))
+        painter.drawLine(
+            int(x + (dir_flag * 6)), int(y_mastil_top + 3),
+            int(x + (dir_flag * 7)), int(y_mastil_top + 25)
+        )
+        
+        # 5. Cápsula Flotante Minimalista para Hora y Estado
+        pill_w = 64
+        pill_h = 32
+        pill_x = x - (pill_w / 2)
+        pill_y = y + 14
+        rect_pill = QRectF(pill_x, pill_y, pill_w, pill_h)
+        
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor(15, 23, 42, 18)))
+        painter.drawRoundedRect(rect_pill.translated(0, 2), 6, 6)
+        
+        painter.setBrush(QBrush(QColor('#FFFFFF')))
+        painter.setPen(QPen(QColor('#A7F3D0' if es_inicio else '#BAE6FD'), 1.2))
+        painter.drawRoundedRect(rect_pill, 6, 6)
+        
+        font_rot = QFont('Segoe UI', 7, QFont.Weight.Bold)
+        font_rot.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.5)
+        painter.setFont(font_rot)
+        painter.setPen(QColor('#059669' if es_inicio else '#0284C7'))
+        rect_txt_rot = QRectF(pill_x, pill_y + 3, pill_w, 12)
+        painter.drawText(rect_txt_rot, Qt.AlignmentFlag.AlignCenter, titulo.upper())
+        
+        font_hr = QFont('Segoe UI', 8, QFont.Weight.Bold)
+        painter.setFont(font_hr)
+        painter.setPen(QColor('#0F172A'))
+        rect_txt_hr = QRectF(pill_x, pill_y + 15, pill_w, 14)
+        painter.drawText(rect_txt_hr, Qt.AlignmentFlag.AlignCenter, hora)
+        
+        painter.restore()
+
+    def _dibujar_vector_icono(self, painter, tipo, motivo, x, y, size, color):
+        """Dibuja iconos vectoriales puros garantizando nitidez sin depender de fuentes emoji"""
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(color, 1.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        s = size / 2.0
+
+        if tipo == 'webcam' and motivo == 'OBJETO':
+            # Celular / Smartphone
+            rect = QRectF(x - s * 0.5, y - s * 0.85, s * 1.0, s * 1.7)
+            painter.drawRoundedRect(rect, 2.5, 2.5)
+            painter.drawLine(int(x - s * 0.3), int(y - s * 0.5), int(x + s * 0.3), int(y - s * 0.5))
+            painter.drawPoint(QPointF(x, y + s * 0.55))
+        elif tipo == 'webcam':
+            # Ojo y pupila
+            path = QPainterPath()
+            path.moveTo(x - s, y)
+            path.quadTo(x, y - s * 0.8, x + s, y)
+            path.quadTo(x, y + s * 0.8, x - s, y)
+            painter.drawPath(path)
+            painter.setBrush(QBrush(color))
+            painter.drawEllipse(QPointF(x, y), s * 0.35, s * 0.35)
+        elif tipo == 'proceso':
+            # Monitor / Ventana de sistema
+            rect = QRectF(x - s * 0.85, y - s * 0.7, s * 1.7, s * 1.4)
+            painter.drawRoundedRect(rect, 2, 2)
+            painter.drawLine(int(x - s * 0.85), int(y - s * 0.25), int(x + s * 0.85), int(y - s * 0.25))
+            painter.setBrush(QBrush(color))
+            painter.drawEllipse(QPointF(x - s * 0.5, y - s * 0.45), 1.2, 1.2)
+            painter.drawEllipse(QPointF(x - s * 0.2, y - s * 0.45), 1.2, 1.2)
+        elif tipo == 'teclado':
+            # Teclado físico
+            rect = QRectF(x - s * 0.9, y - s * 0.6, s * 1.8, s * 1.2)
+            painter.drawRoundedRect(rect, 2.5, 2.5)
+            kw = s * 0.32
+            kh = s * 0.25
+            painter.drawRect(QRectF(x - s * 0.65, y - s * 0.35, kw, kh))
+            painter.drawRect(QRectF(x - s * 0.16, y - s * 0.35, kw, kh))
+            painter.drawRect(QRectF(x + s * 0.33, y - s * 0.35, kw, kh))
+            painter.drawRect(QRectF(x - s * 0.5, y + s * 0.05, s * 1.0, kh))
+        elif tipo == 'audio':
+            # Micrófono
+            capsule = QRectF(x - s * 0.35, y - s * 0.7, s * 0.7, s * 0.9)
+            painter.setBrush(QBrush(color))
+            painter.drawRoundedRect(capsule, s * 0.35, s * 0.35)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            arc = QPainterPath()
+            arc.moveTo(x - s * 0.55, y - s * 0.2)
+            arc.arcTo(QRectF(x - s * 0.55, y - s * 0.5, s * 1.1, s * 0.9), 180, 180)
+            painter.drawPath(arc)
+            painter.drawLine(int(x), int(y + s * 0.4), int(x), int(y + s * 0.7))
+            painter.drawLine(int(x - s * 0.4), int(y + s * 0.7), int(x + s * 0.4), int(y + s * 0.7))
+        painter.restore()
+
+    def mouseMoveEvent(self, event):
+        pos = event.position()
+        nuevo_hover = None
+        for it in self.items_render:
+            hitbox = it.get('hitbox')
+            if hitbox and hitbox.contains(pos):
+                nuevo_hover = it['idx']
+                break
+        if nuevo_hover != self.hovered_idx:
+            self.hovered_idx = nuevo_hover
+            self.update()
+
+    def leaveEvent(self, event):
+        if self.hovered_idx is not None:
+            self.hovered_idx = None
+            self.update()
+
+    def mousePressEvent(self, event):
+        pos = event.position()
+        if self.hovered_card_rect and self.hovered_card_rect.contains(pos):
+            if self.hovered_idx is not None and 0 <= self.hovered_idx < len(self.eventos):
+                ev = self.eventos[self.hovered_idx]
+                if self.fn_abrir_archivo and ev.get('ruta') and os.path.exists(ev.get('ruta')):
+                    self.fn_abrir_archivo(ev['ruta'])
+                    return
+                elif self.fn_abrir_categoria:
+                    self.fn_abrir_categoria(ev['tipo'], ev['titulo_cat'])
+                    return
+
+        for it in self.items_render:
+            hitbox = it.get('hitbox')
+            if hitbox and hitbox.contains(pos):
+                ev = it['ev']
+                if self.fn_abrir_categoria:
+                    self.fn_abrir_categoria(ev['tipo'], ev['titulo_cat'])
+                return
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         
         w = self.width()
         h = self.height()
-        
-        margen_x = 80
-        # Linea base centrada con espacio perfecto
+        margen_x = 85
         y_linea = h // 2
-        
-        # --- Título Superior Centrado ---
-        painter.setPen(self.palette().windowText().color())
-        font = painter.font()
-        font.setFamily("Segoe UI")
-        font.setBold(True)
-        font.setPointSize(24)
-        painter.setFont(font)
-        titulo = "Línea de Tiempo Analítica"
-        fm_titulo = painter.fontMetrics()
-        x_titulo = int((w - fm_titulo.horizontalAdvance(titulo)) / 2)
-        painter.drawText(x_titulo, 50, titulo)
-        
-        # Eliminado el subtítulo para que no choque con los nodos superiores
+        ancho_linea = max(100, w - (margen_x * 2))
         
         if not self.eventos:
-            font.setPointSize(10)
-            painter.setFont(font)
-            painter.setPen(QColor("#BDC3C7"))
-            fm = painter.fontMetrics()
-            painter.drawText(int((w - fm.horizontalAdvance("No hay evidencias registradas.")) / 2), y_linea - 30, "No hay evidencias registradas.")
-            return
-
-        # --- Track Base (Efecto "Glow" y grosor extra) ---
-        ancho_linea = w - (margen_x * 2)
-        grosor_linea = 12
-        
-        # Sombra suave / Glow exterior
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(QColor(46, 204, 113, 50))) # Verde semi-transparente
-        painter.drawRoundedRect(margen_x - 2, y_linea - (grosor_linea//2) - 2, ancho_linea + 4, grosor_linea + 4, (grosor_linea+4)//2, (grosor_linea+4)//2)
-        
-        # Línea central sólida
-        painter.setBrush(QBrush(QColor("#2ECC71")))  
-        painter.drawRoundedRect(margen_x, y_linea - (grosor_linea//2), ancho_linea, grosor_linea, grosor_linea//2, grosor_linea//2)
-        
-        # --- Banderas de Inicio y Fin ---
-        dt_inicio = datetime.datetime.fromtimestamp(self.t_min).strftime("%H:%M")
-        dt_fin = datetime.datetime.fromtimestamp(self.t_max).strftime("%H:%M")
-        font.setPointSize(9)
-        
-        def dibujar_bandera_extremo(x, y, titulo, hora):
-            from PyQt6.QtGui import QPolygonF
-            from PyQt6.QtCore import QPointF
-            color_base = QColor("#27AE60")
-            
-            # Punto en la linea
-            painter.setPen(QPen(color_base, 2))
-            painter.setBrush(QBrush(QColor("white")))
-            painter.drawEllipse(QRectF(x - 6, y - 6, 12, 12))
-            
-            # Hora en el track principal
-            painter.setPen(self.palette().windowText().color())
-            font.setBold(True)
-            painter.setFont(font)
-            painter.drawText(int(x) - 15, int(y) + 30, hora)
-            painter.setPen(QColor("#7F8C8D"))
-            font.setBold(False)
-            painter.setFont(font)
-            painter.drawText(int(x) - 15, int(y) + 45, titulo)
-            
-            # Mástil hacia arriba (como la imagen de Gemini)
-            painter.setPen(QPen(color_base, 2))
-            painter.drawLine(int(x), int(y - 6), int(x), int(y - 35))
-            
-            # Bandera
-            poly = QPolygonF([
-                QPointF(x, y - 35),
-                QPointF(x + 16, y - 27),
-                QPointF(x, y - 19)
-            ])
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QBrush(color_base))
-            painter.drawPolygon(poly)
-
-        dibujar_bandera_extremo(margen_x, y_linea, "Inicio del Examen", dt_inicio)
-        dibujar_bandera_extremo(w - margen_x, y_linea, "Fin del Examen", dt_fin)
+            painter.setBrush(QBrush(QColor(226, 232, 240, 120)))
+            painter.drawRoundedRect(QRectF(margen_x, y_linea - 3, ancho_linea, 6), 3, 3)
+            font_empty = QFont('Segoe UI', 10)
+            painter.setFont(font_empty)
+            painter.setPen(QColor('#94A3B8'))
+            msg = 'No hay evidencias ni alertas registradas en este intento.'
+            fm = painter.fontMetrics()
+            painter.drawText(int((w - fm.horizontalAdvance(msg)) / 2), y_linea - 15, msg)
+            return
+            
+        duracion_total = max(1, self.t_max - self.t_min)
         
-        # --- Eventos (Diseño Gemini: Icono en mástil, Texto al lado, Hora en Track) ---
-        duracion_total = self.t_max - self.t_min
+        # Track principal con glow verde sutil
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor(46, 204, 113, 35)))
+        painter.drawRoundedRect(QRectF(margen_x - 3, y_linea - 5, ancho_linea + 6, 10), 5, 5)
+        painter.setBrush(QBrush(QColor('#2ECC71')))
+        painter.drawRoundedRect(QRectF(margen_x, y_linea - 3, ancho_linea, 6), 3, 3)
         
-        # Pre-calcular posiciones X para esparcirlas si están muy pegadas
-        for ev in self.eventos:
+        # Banderas de Inicio y Fin 3D Ribbon (Opción B)
+        dt_ini = datetime.datetime.fromtimestamp(self.t_min).strftime('%H:%M')
+        dt_fin = datetime.datetime.fromtimestamp(self.t_max).strftime('%H:%M')
+        self._dibujar_bandera_3d_ribbon(painter, margen_x, y_linea, 'Inicio', dt_ini, True)
+        self._dibujar_bandera_3d_ribbon(painter, w - margen_x, y_linea, 'Fin', dt_fin, False)
+        
+        # Paleta y etiquetas por tipo
+        config_tipo = {
+            'webcam': {'color': QColor('#E11D48'), 'bg': QColor(255, 241, 242), 'borde': QColor(254, 205, 211), 'label': 'VISIÓN'},
+            'objeto': {'color': QColor('#DC2626'), 'bg': QColor(254, 242, 242), 'borde': QColor(254, 202, 202), 'label': 'OBJETO'},
+            'proceso': {'color': QColor('#0284C7'), 'bg': QColor(240, 249, 255), 'borde': QColor(186, 230, 253), 'label': 'PROCESOS'},
+            'teclado': {'color': QColor('#7C3AED'), 'bg': QColor(245, 243, 255), 'borde': QColor(221, 214, 254), 'label': 'TECLADO'},
+            'audio': {'color': QColor('#D97706'), 'bg': QColor(254, 243, 199), 'borde': QColor(253, 230, 138), 'label': 'AUDIO'}
+        }
+        
+        # --- ALGORITMO MEJORADO: SMART BALANCING + TIER ESCALATION ---
+        top_items = []
+        bot_items = []
+        last_top_x = -9999
+        last_bot_x = -9999
+        last_dir = -1
+        
+        for i, ev in enumerate(self.eventos):
             pct = (ev['time'] - self.t_min) / duracion_total
-            ev['x_pos'] = margen_x + int(pct * ancho_linea)
+            xr = margen_x + int(pct * ancho_linea)
             
-        
-        colores = {
-            'audio': QColor("#F1C40F"),   
-            'proceso': QColor("#3498DB"), 
-            'webcam': QColor("#E74C3C"),  
-            'teclado': QColor("#9B59B6")  
-        }
-        
-        iconos = {
-            'audio': '🎙',   
-            'proceso': '💻', 
-            'webcam': '👁',  
-            'teclado': '⌨'  
-        }
-        
-        # Algoritmo de asignación de niveles (Arriba / Abajo) con mástiles mucho más altos
-        
-        niveles = []
-        for ev in self.eventos:
-            x_pos = ev['x_pos']
-            color = colores.get(ev['tipo'], QColor("#E74C3C"))
-            # Fallback a un icono genérico
-            icono_char = '•'
-            if ev['tipo'] == 'audio': icono_char = '🎙️'
-            elif ev['tipo'] == 'proceso': icono_char = '⚙️'
-            elif ev['tipo'] == 'webcam': icono_char = '👁️'
-            elif ev['tipo'] == 'teclado': icono_char = '⌨️'
+            dist_top = xr - last_top_x
+            dist_bot = xr - last_bot_x
             
-            elegido = None
-            for niv in niveles:
-                if x_pos > niv['last_x'] + 60:
-                    elegido = niv
-                    break
-            if elegido is None:
-                new_idx = len(niveles)
-                dir_ = -1 if new_idx % 2 == 0 else 1
-                alto = 50 + (new_idx // 2) * 45
-                elegido = {'dir': dir_, 'last_x': -1000, 'alto': alto}
-                niveles.append(elegido)
-            elegido['last_x'] = x_pos
-            
-            direccion = elegido['dir']
-            alto_mastil = elegido['alto']
-            y_end = y_linea + (alto_mastil * direccion)
-            
-            # 1. Dibujar Mástil
-            painter.setPen(QPen(color, 2))
-            painter.drawLine(x_pos, y_linea, x_pos, y_end)
-            
-            # 2. Nodo en el Track (Un punto con borde blanco y centro de color)
-            radio = 6
-            rect_nodo = QRectF(x_pos - radio, y_linea - radio, radio * 2, radio * 2)
-            painter.setPen(QPen(QColor("white"), 2))
-            painter.setBrush(QBrush(color))
-            painter.drawEllipse(rect_nodo)
-            
-            # 3. Nodo en el extremo del mástil (Icono)
-            radio_extremo = 12
-            rect_icono = QRectF(x_pos - radio_extremo, y_end - radio_extremo, radio_extremo * 2, radio_extremo * 2)
-            painter.setPen(QPen(color, 2))
-            painter.setBrush(QBrush(QColor("white")))
-            painter.drawEllipse(rect_icono)
-            
-            # Dibujar icono simplificado (Letra) en el extremo
-            painter.setPen(color)
-            font.setPointSize(10)
-            font.setBold(True)
-            painter.setFont(font)
-            painter.drawText(rect_icono, Qt.AlignmentFlag.AlignCenter, icono_char)
-            
-            # 4. Texto (Etiqueta arriba o abajo del icono) CON LA HORA!
-            str_hora = datetime.datetime.fromtimestamp(ev['time']).strftime("%H:%M:%S")
-            texto_completo = f"{ev['motivo']}\n{str_hora}"
-            
-            if direccion == -1: # Hacia arriba (texto debe ir mas arriba que el circulo)
-                y_texto = y_end - 45
-            else: # Hacia abajo (texto debe ir mas abajo que el circulo)
-                y_texto = y_end + 15
+            UMBRAL = 64
+            if dist_top >= UMBRAL and dist_bot >= UMBRAL:
+                dir_y = -last_dir
+            elif dist_top >= UMBRAL and dist_bot < UMBRAL:
+                dir_y = -1
+            elif dist_bot >= UMBRAL and dist_top < UMBRAL:
+                dir_y = 1
+            else:
+                dir_y = -1 if dist_top >= dist_bot else 1
                 
-            rect_texto = QRectF(x_pos - 50, y_texto, 100, 30)
-            painter.setPen(self.palette().windowText().color())
-            font.setPointSize(8)
-            painter.setFont(font)
-            painter.drawText(rect_texto, Qt.AlignmentFlag.AlignCenter, texto_completo)
-            
-            # (Se eliminó el texto en la línea base para que no se superpongan entre sí cuando hay muchos eventos)
-            
-            # Hitbox para hacer clic
-            ev['rect'] = rect_icono.united(rect_texto).united(rect_nodo)
-
-
-
-    def mousePressEvent(self, event):
-        pos = event.position()
-        for ev in self.eventos:
-            if ev['rect'] and ev['rect'].contains(pos):
-                self.fn_abrir_categoria(ev['tipo'], ev['titulo_cat'])
+            last_dir = dir_y
+            item = {
+                'idx': i,
+                'ev': ev,
+                'x_raw': xr,
+                'x_target': xr,
+                'dir': dir_y,
+                'tier': 0
+            }
+            if dir_y == -1:
+                last_top_x = xr
+                top_items.append(item)
+            else:
+                last_bot_x = xr
+                bot_items.append(item)
+                
+        def procesar_lado(items):
+            if not items:
                 return
+            for k in range(len(items) - 1):
+                curr = items[k]
+                sig = items[k + 1]
+                diff = sig['x_target'] - curr['x_target']
+                
+                if diff < 70:
+                    sig['tier'] = (curr['tier'] + 1) % 2
+                    min_req = 56 if sig['tier'] != curr['tier'] else 72
+                    if diff < min_req:
+                        empuje = min_req - diff
+                        sig['x_target'] += empuje
+                        
+        procesar_lado(top_items)
+        procesar_lado(bot_items)
+        
+        todos = top_items + bot_items
+        todos.sort(key=lambda x: x['idx'])
+        
+        # Limitar para que ningún nodo se salga del margen derecho
+        max_x = w - margen_x - 30
+        if todos and todos[-1]['x_target'] > max_x:
+            overflow = todos[-1]['x_target'] - max_x
+            for it in todos:
+                it['x_target'] -= overflow
+                
+        # Asignar coordenadas Y finales con 2 tiers de altura limpia
+        # Tier 0 = 45px, Tier 1 = 88px
+        alturas = {0: 45, 1: 88}
+        for it in todos:
+            h_tier = alturas.get(it['tier'], 45)
+            it['y_target'] = y_linea + (h_tier * it['dir'])
+            
+        self.items_render = todos
+        
+        # 1. Dibujar Mástiles Perpendiculares (con salida vertical recta a 90°)
+        for it in todos:
+            ev = it['ev']
+            cfg_key = 'objeto' if ev.get('motivo') == 'OBJETO' else ev['tipo']
+            conf = config_tipo.get(cfg_key, config_tipo['webcam'])
+            col = conf['color']
+            xr = it['x_raw']
+            xt = it['x_target']
+            yt = it['y_target']
+            d = it['dir']
+            
+            path = QPainterPath()
+            if abs(xt - xr) <= 2:
+                # Mástil 100% vertical
+                path.moveTo(xr, y_linea)
+                path.lineTo(xr, yt)
+            else:
+                # Salida vertical recta (10px), transición suave en S y entrada vertical recta (10px)
+                recta_salida = d * 10
+                recta_llegada = d * 10
+                p_start_rect = y_linea + recta_salida
+                p_end_rect = yt - recta_llegada
+                
+                path.moveTo(xr, y_linea)
+                path.lineTo(xr, p_start_rect)
+                
+                mid_y = (p_start_rect + p_end_rect) / 2.0
+                path.cubicTo(
+                    xr, mid_y,
+                    xt, mid_y,
+                    xt, p_end_rect
+                )
+                path.lineTo(xt, yt)
+                
+            painter.setPen(QPen(col, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+            painter.drawPath(path)
+            
+            # Ancla sobre el carril central
+            painter.setPen(QPen(QColor('#FFFFFF'), 1.8))
+            painter.setBrush(QBrush(col))
+            painter.drawEllipse(QPointF(xr, y_linea), 4, 4)
+            
+        # 2. Dibujar nodos, iconos y píldoras
+        font_pill = QFont('Segoe UI', 8, QFont.Weight.Bold)
+        font_hora = QFont('Segoe UI', 7, QFont.Weight.DemiBold)
+        
+        for it in todos:
+            ev = it['ev']
+            cfg_key = 'objeto' if ev.get('motivo') == 'OBJETO' else ev['tipo']
+            conf = config_tipo.get(cfg_key, config_tipo['webcam'])
+            col = conf['color']
+            xt = it['x_target']
+            yt = it['y_target']
+            d = it['dir']
+            is_hovered = (it['idx'] == self.hovered_idx)
+            
+            radio = 14 if is_hovered else 12.5
+            
+            if is_hovered:
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QBrush(QColor(col.red(), col.green(), col.blue(), 50)))
+                painter.drawEllipse(QPointF(xt, yt), radio + 8, radio + 8)
+                
+            painter.setPen(QPen(col, 2.5))
+            painter.setBrush(QBrush(QColor('#FFFFFF')))
+            painter.drawEllipse(QPointF(xt, yt), radio, radio)
+            
+            self._dibujar_vector_icono(painter, ev['tipo'], ev.get('motivo', ''), xt, yt, radio * 1.35, col)
+            
+            texto_pill = conf['label']
+            painter.setFont(font_pill)
+            fm_p = painter.fontMetrics()
+            ancho_p = fm_p.horizontalAdvance(texto_pill) + 16
+            alto_p = 17
+            
+            y_pill = (yt - radio - alto_p - 4) if d == -1 else (yt + radio + 4)
+            rect_pill = QRectF(xt - (ancho_p / 2), y_pill, ancho_p, alto_p)
+            
+            painter.setPen(QPen(conf['borde'], 1))
+            painter.setBrush(QBrush(conf['bg']))
+            painter.drawRoundedRect(rect_pill, 8.5, 8.5)
+            
+            painter.setPen(col)
+            painter.drawText(rect_pill, Qt.AlignmentFlag.AlignCenter, texto_pill)
+            
+            hora_str = datetime.datetime.fromtimestamp(ev['time']).strftime('%H:%M:%S')
+            painter.setFont(font_hora)
+            fm_h = painter.fontMetrics()
+            ancho_h = fm_h.horizontalAdvance(hora_str)
+            y_hora = (y_pill - 2) if d == -1 else (y_pill + alto_p + 11)
+            painter.setPen(QColor('#64748B'))
+            painter.drawText(int(xt - (ancho_h / 2)), int(y_hora), hora_str)
+            
+            # Hitbox para interacción del cursor
+            rect_node = QRectF(xt - radio - 2, yt - radio - 2, (radio + 2) * 2, (radio + 2) * 2)
+            it['hitbox'] = rect_node.united(rect_pill)
+            
+        # 3. Hover Card flotante interactiva
+        self.hovered_card_rect = None
+        if self.hovered_idx is not None and 0 <= self.hovered_idx < len(todos):
+            item_h = todos[self.hovered_idx]
+            ev_h = item_h['ev']
+            cfg_h = 'objeto' if ev_h.get('motivo') == 'OBJETO' else ev_h['tipo']
+            conf_h = config_tipo.get(cfg_h, config_tipo['webcam'])
+            col_h = conf_h['color']
+            
+            card_w = 236
+            card_h = 70
+            if item_h['x_target'] + card_w + 30 < w - 20:
+                card_x = item_h['x_target'] + 22
+            else:
+                card_x = item_h['x_target'] - card_w - 22
+                
+            card_y = item_h['y_target'] - (card_h // 2)
+            card_y = max(8, min(h - card_h - 8, card_y))
+            rect_card = QRectF(card_x, card_y, card_w, card_h)
+            self.hovered_card_rect = rect_card
+            
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(QColor(15, 23, 42, 35)))
+            painter.drawRoundedRect(rect_card.translated(2, 3), 8, 8)
+            
+            painter.setBrush(QBrush(QColor('#0F172A')))
+            painter.setPen(QPen(QColor(col_h.red(), col_h.green(), col_h.blue(), 220), 1.5))
+            painter.drawRoundedRect(rect_card, 8, 8)
+            
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(col_h))
+            painter.drawEllipse(QPointF(card_x + 14, card_y + 16), 3.5, 3.5)
+            
+            font_c_title = QFont('Segoe UI', 9, QFont.Weight.Bold)
+            painter.setFont(font_c_title)
+            painter.setPen(QColor('#F8FAFC'))
+            rect_t = QRectF(card_x + 24, card_y + 7, card_w - 32, 17)
+            painter.drawText(rect_t, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, f"{ev_h['titulo_cat']}  •  Alerta IA")
+            
+            font_c_meta = QFont('Segoe UI', 8)
+            painter.setFont(font_c_meta)
+            painter.setPen(QColor('#94A3B8'))
+            fm_m = painter.fontMetrics()
+            hora_h = datetime.datetime.fromtimestamp(ev_h['time']).strftime('%H:%M:%S')
+            arch_nombre = ev_h.get('archivo', 'evidencia')
+            meta_str = f"Hora: {hora_h}   Archivo: {arch_nombre}"
+            meta_elided = fm_m.elidedText(meta_str, Qt.TextElideMode.ElideRight, int(card_w - 28))
+            rect_m = QRectF(card_x + 14, card_y + 27, card_w - 28, 16)
+            painter.drawText(rect_m, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, meta_elided)
+            
+            font_c_cta = QFont('Segoe UI', 8, QFont.Weight.DemiBold)
+            painter.setFont(font_c_cta)
+            painter.setPen(QColor('#38BDF8'))
+            rect_c = QRectF(card_x + 14, card_y + 46, card_w - 28, 16)
+            painter.drawText(rect_c, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, 'Clic para abrir evidencia »')
 
 
 class PanelCarpetas(QWidget):
@@ -409,18 +722,24 @@ class PanelCarpetas(QWidget):
         self.grid_carpetas.addWidget(self.cards['teclado'][0], 1, 1)
         
         self.lay_carpetas_main.addWidget(widget_grid)
-        self.lay_carpetas_main.addSpacing(80) # Extra separación masiva entre carpetas y línea de tiempo
+        self.lay_carpetas_main.addSpacing(25)
         
-        self.timeline = LineaDeTiempoWidget(self.abrir_categoria)
+        self.lbl_timeline_title = QLabel("Línea de Tiempo Analítica")
+        self.lbl_timeline_title.setObjectName("pc_lbl_timeline_title")
+        self.lbl_timeline_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_timeline_title.setStyleSheet("font-size: 20px; font-weight: bold; margin-bottom: 2px;")
+        self.lay_carpetas_main.addWidget(self.lbl_timeline_title)
         
-        # Envolvemos la línea de tiempo en su propio ScrollArea para que su ancho dinámico no rompa el diseño general
+        self.timeline = LineaDeTiempoWidget(self.abrir_categoria, fn_abrir_archivo=self._abrir_archivo)
+        
+        # Contenedor limpio para la línea de tiempo sin barras de desplazamiento innecesarias
         self.scroll_timeline = QScrollArea()
         self.scroll_timeline.setWidgetResizable(True)
         self.scroll_timeline.setWidget(self.timeline)
         self.scroll_timeline.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         self.scroll_timeline.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_timeline.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.scroll_timeline.setMinimumHeight(670)
+        self.scroll_timeline.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_timeline.setFixedHeight(310)
         
         self.lay_carpetas_main.addWidget(self.scroll_timeline)
         
@@ -758,9 +1077,15 @@ class PanelCarpetas(QWidget):
             base64_descifrado = f_crypto.decrypt(contenido_cifrado).decode('utf-8')
             contenido_final = base64.b64decode(base64_descifrado)
             
-            # Crear archivo temporal descifrado
-            ext = os.path.splitext(ruta_archivo)[1]
-            if not ext: ext = ".png" # fallback
+            # Detectar el formato real de la imagen segun su cabecera binaria
+            if contenido_final.startswith(b'\xff\xd8\xff'):
+                ext = ".jpg"
+            elif contenido_final.startswith(b'RIFF') and b'WEBP' in contenido_final[:12]:
+                ext = ".webp"
+            elif contenido_final.startswith(b'\x89PNG'):
+                ext = ".png"
+            else:
+                ext = os.path.splitext(ruta_archivo)[1] or ".jpg"
             
             fd, temp_path = tempfile.mkstemp(suffix=ext)
             with os.fdopen(fd, 'wb') as f_temp:

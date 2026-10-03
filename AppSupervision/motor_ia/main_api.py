@@ -78,14 +78,23 @@ def analizar_frame(request: FrameRequest):
     # Ejecutar el análisis de visión (esto dibuja el HUD en 'img')
     resultados = analizador_vision.analizar_frame(img)
     
-    # Volver a codificar la imagen anotada a base64
-    _, buffer_anotado = cv2.imencode('.jpg', img)
+    # 1. Preview ultra-liviano para streaming continuo al profesor (640x360 cal 55, ~8 KB)
+    stream_preview = cv2.resize(img, (640, 360), interpolation=cv2.INTER_AREA)
+    _, buffer_anotado = cv2.imencode('.jpg', stream_preview, [cv2.IMWRITE_JPEG_QUALITY, 55])
     frame_anotado_b64 = base64.b64encode(buffer_anotado).decode('utf-8')
+    
+    # 2. Snapshot de alta definición (1280x720 HD cal 80) para evidencia forense
+    frame_evidencia_b64 = None
+    tiene_alertas = bool(resultados.get("alertas")) or bool(resultados.get("alertas_crudas"))
+    if tiene_alertas:
+      _, buffer_hd = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 80])
+      frame_evidencia_b64 = base64.b64encode(buffer_hd).decode('utf-8')
     
     return {
       "status": "ok", 
       "resultados": resultados,
-      "frame_anotado": frame_anotado_b64
+      "frame_anotado": frame_anotado_b64,
+      "frame_evidencia": frame_evidencia_b64
     }
   except Exception as e:
     print(f"ERROR EN VISION: {e}")

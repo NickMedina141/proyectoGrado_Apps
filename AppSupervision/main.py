@@ -12,14 +12,31 @@ if len(sys.argv) > 1 and sys.argv[1] == '--run-api':
     uvicorn.run(app, host="127.0.0.1", port=8005, reload=False)
     sys.exit(0)
 
+# Validación estricta de Sistema Operativo Soportado (Solo Windows)
+import platform
+if platform.system().lower() != "windows":
+    print("FATAL: AppSupervision ha sido diseñada y certificada exclusivamente para entornos Windows.")
+    try:
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        _temp_app = QApplication(sys.argv)
+        QMessageBox.critical(
+            None,
+            "Sistema No Compatible",
+            "Acceso denegado: AppSupervision ha sido diseñada y certificada exclusivamente para sistemas operativos Windows.\n\n"
+            "Por motivos de seguridad e integridad, no es posible ejecutar el entorno de supervisión en este sistema operativo."
+        )
+    except Exception:
+        pass
+    sys.exit(1)
+
 # Asegurar que los imports relativos funcionen correctamente
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Sincronización silenciosa de parches desde GitHub Releases
-from utils.actualizador import sincronizar_parches
-base_dir = os.path.dirname(os.path.abspath(__file__))
-if sincronizar_parches("AppSupervision", base_dir):
-    os.execl(sys.executable, sys.executable, *sys.argv)
+# Sincronización silenciosa de parches desde GitHub Releases (DESACTIVADA PARA DESARROLLO LOCAL)
+# from utils.actualizador import sincronizar_parches
+# base_dir = os.path.dirname(os.path.abspath(__file__))
+# if sincronizar_parches("AppSupervision", base_dir):
+#     os.execl(sys.executable, sys.executable, *sys.argv)
 
 # FIX CRÍTICO: QtWebEngine requiere ser importado ANTES de crear QApplication
 try:

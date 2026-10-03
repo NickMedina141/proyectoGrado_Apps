@@ -68,8 +68,12 @@ class HiloCamara(QThread):
         
         # EMISIÓN INMEDIATA Y FLUIDA AL PROFESOR (Con dibujos si hay, o limpio si la IA va lenta/caída)
         if hasattr(self, 'senal_frame_anotado'):
-          frame_a_enviar = self.ultimo_frame_ia if self.ultimo_frame_ia else frame_b64
-          self.senal_frame_anotado.emit(frame_a_enviar)
+          if self.ultimo_frame_ia:
+            self.senal_frame_anotado.emit(self.ultimo_frame_ia)
+          else:
+            frame_fallback = cv2.resize(frame, (640, 360), interpolation=cv2.INTER_AREA)
+            _, buf_fallback = cv2.imencode('.jpg', frame_fallback, [cv2.IMWRITE_JPEG_QUALITY, 55])
+            self.senal_frame_anotado.emit(base64.b64encode(buf_fallback).decode('utf-8'))
         
         # --- BIOMETRIA ROBUSTA (InsightFace) cada 15 seg ---
         if hasattr(self, 'biometria_check_time'):
@@ -141,11 +145,14 @@ class HiloCamara(QThread):
       
       if resp.status_code == 200:
         data = resp.json()
-        # Guardamos el frame dibujado para que el bucle principal lo emita súper fluido
+        # Guardamos el frame ligero anotado (640x360) para que el streaming continuo sea ultra-fluido
         self.ultimo_frame_ia = data.get("frame_anotado", frame_b64)
+        
+        # Frame de alta definición (1280x720 HD) para evidencia forense
+        frame_evidencia = data.get("frame_evidencia") or frame_b64
           
         if "resultados" in data:
-          self._procesar_resultados_ia(data["resultados"], self.ultimo_frame_ia)
+          self._procesar_resultados_ia(data["resultados"], frame_evidencia)
       else:
         self.ultimo_frame_ia = frame_b64
     except Exception:

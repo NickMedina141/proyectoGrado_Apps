@@ -31,9 +31,9 @@ def _guardar_config_local(base_path, datos):
 def sincronizar_parches(nombre_app, base_path):
     """
     Verifica de forma silenciosa si existe un parche de estabilidad en GitHub Releases.
-    No muestra avisos molestos de 'Version 1.1, 1.2'. Mantiene la aplicación en Versión 1.0 oficial.
-    Retorna True si se aplicó un parche (requiere reiniciar), False en caso contrario.
+    DESACTIVADO PARA DESARROLLO LOCAL.
     """
+    return False
     try:
         peticion = urllib.request.Request(
             API_URL, 

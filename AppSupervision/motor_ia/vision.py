@@ -23,7 +23,7 @@ class AnalizadorVision:
       self.mediapipe_disponible = False
       print("ADVERTENCIA: MediaPipe no compatible con esta versión de Python. Análisis facial desactivado.")
       
-    self.detector_objetos = DetectorObjetos(frames_entre_analisis=15)
+    self.detector_objetos = DetectorObjetos(frames_entre_analisis=1)
     
     # Instanciar el cerebro que evalúa el comportamiento global
     self.analizador_comportamiento = AnalizadorComportamiento()

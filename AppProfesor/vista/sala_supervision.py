@@ -42,6 +42,7 @@ class SalaSupervision(QWidget):
         self.codigo_examen_actual = None
         self.estado_estudiantes = {}
         self.sesiones_activas_ids = set()
+        self._max_intentos_cache = None
 
     def _calcular_distancia_haversine(self, lat1, lon1, lat2, lon2):
         import math
@@ -55,9 +56,41 @@ class SalaSupervision(QWidget):
         except Exception:
             return 0.0
 
+    def _obtener_max_intentos_examen(self):
+        try:
+            if hasattr(self, '_max_intentos_cache') and self._max_intentos_cache is not None:
+                return self._max_intentos_cache
+            if not getattr(self, 'codigo_examen_actual', None):
+                return None
+            from utils.gestor_sesion import sesion_actual
+            from api.cliente_respuesta import cliente_api
+            prof_id = sesion_actual.obtener_profesor_id()
+            if prof_id:
+                exito, examenes = cliente_api.obtener_mis_examenes(prof_id)
+                if exito and isinstance(examenes, list):
+                    for ex in examenes:
+                        cod = ex.get("codigoExamen") or ex.get("id")
+                        if cod == self.codigo_examen_actual:
+                            conf = ex.get("configuracionExamen") or {}
+                            if "intentosMaximos" in conf:
+                                self._max_intentos_cache = int(conf["intentosMaximos"])
+                                return self._max_intentos_cache
+                            if "maxIntentos" in conf:
+                                self._max_intentos_cache = int(conf["maxIntentos"])
+                                return self._max_intentos_cache
+                            if "permitirReintentos" in conf:
+                                r = int(conf.get("permitirReintentos", 0))
+                                self._max_intentos_cache = r if r > 0 else 1
+                                return self._max_intentos_cache
+        except Exception as e:
+            print("Error al obtener intentos maximos del examen:", e)
+        return None
+
     def _procesar_datos_mapa(self, datos):
         if not datos or not isinstance(datos, list):
             return {"pines": []}
+
+        max_permitidos = self._obtener_max_intentos_examen()
 
         # 1. Agrupar sesiones validas por estudiante
         estudiantes_sesiones = {}
@@ -99,7 +132,9 @@ class SalaSupervision(QWidget):
         todos_los_intentos = []
         for est_id, s_list in estudiantes_sesiones.items():
             s_list.sort(key=lambda x: x.get("inicio", ""))
-            total_intentos = len(s_list)
+            total_realizados = len(s_list)
+            # El total mostrado refleja el maximo permitido del examen si esta configurado
+            total_intentos = max(total_realizados, max_permitidos) if max_permitidos else total_realizados
 
             trayectoria = []
             for i, ses in enumerate(s_list):
@@ -113,7 +148,7 @@ class SalaSupervision(QWidget):
                 })
 
             distancia_total = 0.0
-            if total_intentos > 1:
+            if total_realizados > 1:
                 distancia_total = self._calcular_distancia_haversine(
                     s_list[0]["lat"], s_list[0]["lon"],
                     s_list[-1]["lat"], s_list[-1]["lon"]
@@ -121,7 +156,7 @@ class SalaSupervision(QWidget):
 
             for i, ses in enumerate(s_list):
                 intento_num = i + 1
-                es_actual = (i == total_intentos - 1)
+                es_actual = (i == total_realizados - 1)
                 todos_los_intentos.append({
                     "sesionId": ses["sesionId"],
                     "estudianteId": est_id,
@@ -134,7 +169,7 @@ class SalaSupervision(QWidget):
                     "lat": ses["lat"],
                     "lon": ses["lon"],
                     "distanciaDesplazamientoKm": distancia_total,
-                    "trayectoria": trayectoria if total_intentos > 1 else []
+                    "trayectoria": trayectoria if total_realizados > 1 else []
                 })
 
         # 3. Agrupación por proximidad geográfica (Clusters <= 50 metros)
@@ -164,13 +199,13 @@ class SalaSupervision(QWidget):
             cant_alumnos = len(alumnos_unicos)
 
             # Comprobar si al menos una sesión en este cluster sigue en curso
-            tiene_en_curso = any(str(it.get("estado", "")).upper() == "EN_CURSO" for it in items)
+            tiene_en_curso = any(str(it.get("estado", "")).upper() in ["EN_CURSO", "INICIADA", "ACTIVA"] for it in items)
 
-            if cant_alumnos >= 4:
+            if cant_alumnos >= 10:
                 categoria = "AULA_PRESENCIAL"
                 color = "morado"
-            elif cant_alumnos in (2, 3):
-                categoria = "PROXIMIDAD_SOSPECHOSA"
+            elif cant_alumnos >= 2:
+                categoria = "UBICACION_COMPARTIDA"
                 color = "rojo" if tiene_en_curso else "morado"
             else:
                 if tiene_en_curso:
@@ -303,6 +338,7 @@ class SalaSupervision(QWidget):
     def cargar_estudiantes(self, codigo_examen, nombre_materia=""):
         self.limpiar_sala()
         self.codigo_examen_actual = codigo_examen
+        self._max_intentos_cache = None
         self.estado_vacio(False)
         self.estado_estudiantes = {}  # Diccionario para rastrear estados
 
@@ -441,12 +477,15 @@ class SalaSupervision(QWidget):
         lbl_c1.setObjectName("label_cx_1")
         lbl_c1.setWordWrap(True)
 
-        estado_db = sesion.get("estadoSesion", "")
-        if estado_db == "EN_CURSO":
+        estado_db = str(sesion.get("estadoSesion", "")).upper()
+        if estado_db in ["INICIADA", "EN_CURSO", "ACTIVA"]:
             texto_conexion = "Buena"
             color_cx = "#27AE60"
+        elif estado_db in ["FINALIZADA", "ANULADA"]:
+            texto_conexion = "Offline"
+            color_cx = "#7F8C8D"
         else:
-            texto_conexion = "Mala"
+            texto_conexion = "Inestable"
             color_cx = "#E74C3C"
 
         lbl_val_cx = QLabel(texto_conexion)
@@ -472,11 +511,14 @@ class SalaSupervision(QWidget):
 
         self.tarjetas_estudiantes[sesion_id] = {
             "widget": tarjeta,
-          "lbl_alertas": lbl_val_al,
-          "lbl_integridad": lbl_val_int,
-          "badge": lbl_badge,
-          "alertas_count": alertas,
-          "integridad": integridad
+            "lbl_alertas": lbl_val_al,
+            "lbl_integridad": lbl_val_int,
+            "lbl_conexion": lbl_val_cx,
+            "badge": lbl_badge,
+            "alertas_count": alertas,
+            "integridad": integridad,
+            "estudiante_id": estudiante_id,
+            "estado": estado_db
         }
 
     def abrir_estudiante(self, nombre, sesion_id):
@@ -511,7 +553,8 @@ class SalaSupervision(QWidget):
         
         # BYPASS E2EE: Guardar la evidencia localmente!
         import os
-        base_dir = os.path.join(os.path.expanduser("~"), "Documents", "DataSupervision", "Examenes", self.codigo_examen_actual, datos_alerta.get("nombreEstudiante", "Desconocido").replace(" ", "_"), datos_alerta.get("sesionId", "unknown"))
+        cod_ex = str(self.codigo_examen_actual or "general")
+        base_dir = os.path.join(os.path.expanduser("~"), "Documents", "DataSupervision", "Examenes", cod_ex, datos_alerta.get("nombreEstudiante", "Desconocido").replace(" ", "_"), datos_alerta.get("sesionId", "unknown"))
         for cat in ['audio', 'proceso', 'webcam', 'teclado']:
             os.makedirs(os.path.join(base_dir, cat), exist_ok=True)
             
@@ -658,9 +701,20 @@ class SalaSupervision(QWidget):
         self.layout_feed.insertWidget(0, tarjeta)
 
         # Actualizar tarjeta del estudiante si existe
-        est_id = alerta.get("estudianteId", alerta.get("sesionId", ""))
-        if est_id and est_id in self.tarjetas_estudiantes:
-            tarjeta_est = self.tarjetas_estudiantes[est_id]
+        sid = alerta.get("sesionId") or ""
+        eid = alerta.get("estudianteId") or ""
+        tarjeta_est = self.tarjetas_estudiantes.get(sid) or self.tarjetas_estudiantes.get(eid)
+        if not tarjeta_est and eid:
+            for t in self.tarjetas_estudiantes.values():
+                if t.get("estudiante_id") == eid:
+                    tarjeta_est = t
+                    break
+
+        if tarjeta_est:
+            # Confirmar conexion activa al recibir telemetria/alerta en vivo
+            if "lbl_conexion" in tarjeta_est and tarjeta_est["lbl_conexion"]:
+                tarjeta_est["lbl_conexion"].setText("Buena")
+                tarjeta_est["lbl_conexion"].setStyleSheet("font-weight: bold; color: #27AE60;")
 
             # Actualizar el numero de alertas sumando 1 si es una nueva alerta (vía WebSocket)
             # Las alertas del historial REST ya vienen contabilizadas en la carga inicial
