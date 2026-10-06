@@ -17,9 +17,16 @@
     "valentina flores": "10900009",
     "flores valentina": "10900009",
     "david leonardo sanchez guerra": "10900000",
-    "sanchez guerra david leonardo": "10900000"
+    "sanchez guerra david leonardo": "10900000",
+    "carlos mendoza": "12345678",
+    "mendoza carlos": "12345678",
+    "ana gomez": "87654321",
+    "gomez ana": "87654321"
   },
-  "por_id": {},
+  "por_id": {
+    "est-101": "12345678",
+    "est-102": "87654321"
+  },
   "por_email": {
     "andres.martinez@unicesar.edu.co": "10900002",
     "laura.lopez@unicesar.edu.co": "10900003",

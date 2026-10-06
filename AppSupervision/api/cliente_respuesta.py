@@ -555,7 +555,9 @@ class ClienteApi:
     try:
       from config.configuracion import url
       endpoint = f"{url}/apelaciones/{sesion_id}/solicitar"
-      res = self.cliente.post(endpoint, content=argumento_estudiante.encode("utf-8"), headers=self._obtener_cabecera_token())
+      headers = self._obtener_cabecera_token()
+      headers["Content-Type"] = "text/plain; charset=utf-8"
+      res = self.cliente.post(endpoint, content=argumento_estudiante.encode("utf-8"), headers=headers)
       if res.status_code in [200, 201]:
         return True, "Apelación solicitada con éxito."
       else:
@@ -610,7 +612,7 @@ class HiloStreamEstudiante(QThread):
           on_close=self.al_cerrar
         )
         print(f"[WS-ESTUDIANTE] Iniciando run_forever con ping activo...")
-        self.ws.run_forever(ping_interval=4, ping_timeout=3)
+        self.ws.run_forever(ping_interval=15, ping_timeout=10)
         print(f"[WS-ESTUDIANTE] run_forever() finalizó.")
       except Exception as e:
         print(f"[WS-ESTUDIANTE] CRASH FATAL EN EL HILO WS: {e}")
@@ -622,6 +624,12 @@ class HiloStreamEstudiante(QThread):
 
   def al_abrir(self, ws):
     print(f"[WS-ESTUDIANTE] Abriendo túnel STOMP hacia {self.url_conexion}...")
+    try:
+      import socket
+      if hasattr(ws, 'sock') and ws.sock:
+        ws.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except Exception:
+      pass
     connect_frame = "CONNECT\naccept-version:1.1,1.2\nhost:localhost\nheart-beat:10000,10000\n\n\x00"
     ws.send(connect_frame)
     cliente_api.conectado = True

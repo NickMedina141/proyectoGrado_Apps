@@ -48,6 +48,12 @@ class HiloWebSocket(QThread):
 
   def al_abrir(self, ws):
     print(f"[WS-PROFESOR] Abriendo túnel STOMP hacia {self.url_conexion}...")
+    try:
+      import socket
+      if hasattr(ws, 'sock') and ws.sock:
+        ws.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except Exception:
+      pass
     # Enviar trama STOMP CONNECT (host es obligatorio en STOMP 1.2)
     connect_frame = "CONNECT\naccept-version:1.1,1.2\nhost:localhost\nheart-beat:10000,10000\n\n\x00"
     ws.send(connect_frame)

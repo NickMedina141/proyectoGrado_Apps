@@ -43,23 +43,34 @@ class PanelApelaciones(QWidget):
     
     self.btn_pag_prev.clicked.connect(self.pagina_anterior)
     self.btn_pag_next.clicked.connect(self.pagina_siguiente)
-    
-    self.cargar_apelaciones_reales()
+    self._hilo_apelaciones = None
 
-
-
-  def cargar_apelaciones_reales(self):
-    self.todas_las_apelaciones = []
+  def cargar_apelaciones_reales(self, callback_finalizado=None):
     profesor_id = sesion_actual.obtener_profesor_id()
     if not profesor_id:
+      if callback_finalizado:
+          try: callback_finalizado()
+          except Exception: pass
       return
-      
-    exito, datos = cliente_api.obtener_apelaciones_pendientes(profesor_id)
-    
-    if exito and isinstance(datos, list):
-      self.todas_las_apelaciones = datos
-      
-    self.aplicar_filtro()
+
+    def _tarea_red():
+        return cliente_api.obtener_apelaciones_pendientes(profesor_id)
+
+    def _al_recibir(resultado):
+        exito, datos = resultado
+        if exito and isinstance(datos, list):
+            self.todas_las_apelaciones = datos
+        else:
+            self.todas_las_apelaciones = []
+        self.aplicar_filtro()
+        if callback_finalizado:
+            try: callback_finalizado()
+            except Exception: pass
+
+    from vista.overlay_carga import HiloTrabajador
+    self._hilo_apelaciones = HiloTrabajador(_tarea_red)
+    self._hilo_apelaciones.senal_resultado.connect(_al_recibir)
+    self._hilo_apelaciones.start()
 
   def aplicar_filtro(self):
     filtro = self.combo_filtro.currentText()

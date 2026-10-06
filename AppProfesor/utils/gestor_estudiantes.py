@@ -99,38 +99,50 @@ class GestorEstudiantes:
                             nombre=nombre,
                             apellidos=apellidos,
                             cedula=cedula,
-                            email=email
+                            email=email,
+                            guardar=False
                         )
+            self._guardar_cache()
         except Exception as e:
             print(f"[GestorEstudiantes] Advertencia leyendo CSV {ruta_csv}: {e}")
 
-    def registrar_estudiante(self, nombre: str, apellidos: str = "", cedula: str = "", email: str = "", estudiante_id: str = ""):
+    def registrar_estudiante(self, nombre: str, apellidos: str = "", cedula: str = "", email: str = "", estudiante_id: str = "", guardar: bool = True):
         cedula_str = str(cedula).strip()
         if not cedula_str:
             return
 
+        modificado = False
         nombre_completo = f"{nombre} {apellidos}".strip()
         nom_norm = normalizar_texto(nombre_completo)
-        if nom_norm:
+        if nom_norm and self.mapa_cedulas_por_nombre.get(nom_norm) != cedula_str:
             self.mapa_cedulas_por_nombre[nom_norm] = cedula_str
+            modificado = True
 
         # Registrar también variación 'apellidos nombre'
         if nombre and apellidos:
             inverso = normalizar_texto(f"{apellidos} {nombre}")
-            if inverso:
+            if inverso and self.mapa_cedulas_por_nombre.get(inverso) != cedula_str:
                 self.mapa_cedulas_por_nombre[inverso] = cedula_str
+                modificado = True
 
         if email:
             email_norm = str(email).strip().lower()
-            self.mapa_cedulas_por_email[email_norm] = cedula_str
+            if self.mapa_cedulas_por_email.get(email_norm) != cedula_str:
+                self.mapa_cedulas_por_email[email_norm] = cedula_str
+                modificado = True
 
         if estudiante_id:
             eid_norm = str(estudiante_id).strip().lower()
-            self.mapa_cedulas_por_id[eid_norm] = cedula_str
+            if self.mapa_cedulas_por_id.get(eid_norm) != cedula_str:
+                self.mapa_cedulas_por_id[eid_norm] = cedula_str
+                modificado = True
 
-        self._guardar_cache()
+        if guardar and modificado:
+            self._guardar_cache()
 
     def registrar_estudiantes_bulk(self, lista_estudiantes: list):
+        if not lista_estudiantes:
+            return
         for e in lista_estudiantes:
             if isinstance(e, dict):
                 self.registrar_estudiante(
@@ -138,13 +150,19 @@ class GestorEstudiantes:
                     apellidos=e.get("apellidos", ""),
                     cedula=e.get("cedula", "") or e.get("documento", ""),
                     email=e.get("email", ""),
-                    estudiante_id=e.get("id", "") or e.get("estudianteId", "")
+                    estudiante_id=e.get("id", "") or e.get("estudianteId", ""),
+                    guardar=False
                 )
+        self._guardar_cache()
 
-    def asociar_id_con_cedula(self, estudiante_id: str, cedula: str):
+    def asociar_id_con_cedula(self, estudiante_id: str, cedula: str, guardar: bool = False):
         if estudiante_id and cedula:
-            self.mapa_cedulas_por_id[str(estudiante_id).strip().lower()] = str(cedula).strip()
-            self._guardar_cache()
+            key = str(estudiante_id).strip().lower()
+            val = str(cedula).strip()
+            if self.mapa_cedulas_por_id.get(key) != val:
+                self.mapa_cedulas_por_id[key] = val
+                if guardar:
+                    self._guardar_cache()
 
     def obtener_cedula(self, nombre: str = "", estudiante_id: str = "", email: str = "") -> str:
         """
@@ -161,7 +179,7 @@ class GestorEstudiantes:
             c = self.mapa_cedulas_por_email.get(str(email).strip().lower())
             if c:
                 if estudiante_id:
-                    self.asociar_id_con_cedula(estudiante_id, c)
+                    self.asociar_id_con_cedula(estudiante_id, c, guardar=False)
                 return c
 
         # 3. Búsqueda por Nombre Normalizado
@@ -170,7 +188,7 @@ class GestorEstudiantes:
             if norm_query in self.mapa_cedulas_por_nombre:
                 c = self.mapa_cedulas_por_nombre[norm_query]
                 if estudiante_id:
-                    self.asociar_id_con_cedula(estudiante_id, c)
+                    self.asociar_id_con_cedula(estudiante_id, c, guardar=False)
                 return c
 
             # Comparación por conjunto de tokens para flexibilidad de orden
@@ -180,7 +198,7 @@ class GestorEstudiantes:
                     tokens_reg = set(nom_reg.split())
                     if tokens_query == tokens_reg or tokens_query.issubset(tokens_reg) or tokens_reg.issubset(tokens_query):
                         if estudiante_id:
-                            self.asociar_id_con_cedula(estudiante_id, c)
+                            self.asociar_id_con_cedula(estudiante_id, c, guardar=False)
                         return c
 
         return ""

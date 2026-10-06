@@ -51,61 +51,102 @@ class ReporteIA(QWidget):
     if hasattr(self, 'btn_ver_todos_estudiantes'):
       self.btn_ver_todos_estudiantes.clicked.connect(self.abrir_directorio_estudiantes)
     
-  def cargar_examenes(self):
+  def cargar_examenes(self, callback_finalizado=None):
     profesor_id = sesion_actual.obtener_profesor_id()
     if not profesor_id:
+      if callback_finalizado:
+          try: callback_finalizado()
+          except Exception: pass
       return
-      
-    id_seleccionado = None
-    idx_actual = self.combo_examenes.currentIndex()
-    if idx_actual >= 0 and idx_actual < len(self.examenes_ids):
-        id_seleccionado = self.examenes_ids[idx_actual]
 
-    self.combo_examenes.blockSignals(True)
-    self.combo_examenes.clear()
-    self.examenes_ids.clear()
-    
-    exito, examenes = cliente_api.obtener_mis_examenes(profesor_id)
-    if exito and isinstance(examenes, list):
-      for ex in examenes:
-        control = ex.get("controlAcceso") or {}
-        estado = control.get("estadoPin", "")
-        if estado == "FINALIZADO":
-          materia = ex.get("materiaCodigo") or "Desconocida"
-          fecha_dict = ex.get("fechaExamen") or {}
-          fecha = fecha_dict.get("horaFin") or fecha_dict.get("horaInicio", "Sin Fecha")
-          if "T" in fecha:
-            fecha = fecha.split("T")[0]
-            
-          texto = f"Examen: {materia} - Finalizado el {fecha}"
-          self.combo_examenes.addItem(texto)
-          id_ex = ex.get("codigoExamen") or ex.get("id")
-          self.examenes_ids.append(id_ex)
-          if not hasattr(self, 'examenes_completos'):
-              self.examenes_completos = {}
-          self.examenes_completos[id_ex] = ex
-          
-    if id_seleccionado and id_seleccionado in self.examenes_ids:
-        nuevo_idx = self.examenes_ids.index(id_seleccionado)
-        self.combo_examenes.setCurrentIndex(nuevo_idx)
-          
-    self.combo_examenes.blockSignals(False)
-    
-    if self.combo_examenes.count()>0:
-      self.actualizar_reporte()
+    def _tarea_red():
+        return cliente_api.obtener_mis_examenes(profesor_id)
 
-  def actualizar_reporte(self):
+    def _al_recibir(resultado):
+        exito, examenes = resultado
+        id_seleccionado = None
+        idx_actual = self.combo_examenes.currentIndex()
+        if idx_actual >= 0 and idx_actual < len(self.examenes_ids):
+            id_seleccionado = self.examenes_ids[idx_actual]
+
+        self.combo_examenes.blockSignals(True)
+        self.combo_examenes.clear()
+        self.examenes_ids.clear()
+
+        if exito and isinstance(examenes, list):
+          for ex in examenes:
+            control = ex.get("controlAcceso") or {}
+            estado = control.get("estadoPin", "")
+            if estado == "FINALIZADO":
+              materia = ex.get("materiaCodigo") or "Desconocida"
+              fecha_dict = ex.get("fechaExamen") or {}
+              fecha = fecha_dict.get("horaFin") or fecha_dict.get("horaInicio", "Sin Fecha")
+              if "T" in fecha:
+                fecha = fecha.split("T")[0]
+              texto = f"Examen: {materia} - Finalizado el {fecha}"
+              self.combo_examenes.addItem(texto)
+              id_ex = ex.get("codigoExamen") or ex.get("id")
+              self.examenes_ids.append(id_ex)
+              if not hasattr(self, 'examenes_completos'):
+                  self.examenes_completos = {}
+              self.examenes_completos[id_ex] = ex
+
+        if id_seleccionado and id_seleccionado in self.examenes_ids:
+            nuevo_idx = self.examenes_ids.index(id_seleccionado)
+            self.combo_examenes.setCurrentIndex(nuevo_idx)
+
+        self.combo_examenes.blockSignals(False)
+
+        if self.combo_examenes.count() > 0:
+            self.actualizar_reporte(callback_finalizado=callback_finalizado)
+        elif callback_finalizado:
+            try: callback_finalizado()
+            except Exception: pass
+
+    from vista.overlay_carga import HiloTrabajador
+    self._hilo_examenes = HiloTrabajador(_tarea_red)
+    self._hilo_examenes.senal_resultado.connect(_al_recibir)
+    self._hilo_examenes.start()
+
+  def actualizar_reporte(self, callback_finalizado=None):
     idx = self.combo_examenes.currentIndex()
-    if idx < 0 or idx>= len(self.examenes_ids):
+    if idx < 0 or idx >= len(self.examenes_ids):
+      if callback_finalizado:
+          try: callback_finalizado()
+          except Exception: pass
       return
-      
+
     codigo_examen = self.examenes_ids[idx]
-    exito, sesiones = cliente_api.obtener_sesiones_examen(codigo_examen, todas=True)
-    
-    if not exito or not isinstance(sesiones, list):
-      QMessageBox.warning(self, "Error", "No se pudieron cargar los datos del examen.")
-      return
-      
+
+    def _tarea_red():
+        return cliente_api.obtener_sesiones_examen(codigo_examen, todas=True)
+
+    def _al_recibir(resultado):
+        exito, sesiones = resultado
+        if not exito or not isinstance(sesiones, list):
+          if callback_finalizado:
+              try: callback_finalizado()
+              except Exception: pass
+          return
+
+        self._procesar_datos_reporte(sesiones, codigo_examen)
+        if callback_finalizado:
+            try: callback_finalizado()
+            except Exception: pass
+
+    from vista.overlay_carga import HiloTrabajador
+    self._hilo_sesiones = HiloTrabajador(_tarea_red)
+    self._hilo_sesiones.senal_resultado.connect(_al_recibir)
+    self._hilo_sesiones.start()
+
+  def _procesar_datos_reporte(self, sesiones, codigo_examen=None):
+    if not codigo_examen:
+      idx = self.combo_examenes.currentIndex()
+      if 0 <= idx < len(self.examenes_ids):
+        codigo_examen = self.examenes_ids[idx]
+      else:
+        codigo_examen = ""
+    self.codigo_examen_actual = codigo_examen
     self.sesiones_actuales = sesiones
     
     alumnos_rojos = 0

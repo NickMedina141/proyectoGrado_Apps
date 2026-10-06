@@ -55,62 +55,35 @@ class VentanaPrincipal(QWidget):
         self.label_logo_placeholder.setText("")
         self.label_logo_placeholder.setStyleSheet(f"border-image: url('{logo_path}'); border-radius: 50px;")
     
-    # Instanciamos las demás vistas
-    self.vista_sala = SalaSupervision()
-    self.vista_apelaciones = PanelApelaciones()
-    self.vista_detalle_est = DetalleEstudiante(self)
-    self.vista_reporte = ReporteIA()
-    self.vista_crear = CrearExamen()
-    self.vista_configuracion = ConfiguracionExamen()
-    
-    # contenedor_vistas ya tiene la pagina_dashboard en el índice 0 desde el XML.
-    # Agregamos las vistas (Índice 1, 2, 3)
-    self.contenedor_vistas.addWidget(self.vista_sala)     
-    self.contenedor_vistas.addWidget(self.vista_apelaciones) 
-    self.contenedor_vistas.addWidget(self.vista_detalle_est)
-    
-    # Envolver ReporteIA en un ScrollArea para evitar bug de geometría por altura mínima excedida
-    from PyQt6.QtWidgets import QScrollArea
-    self.scroll_reporte = QScrollArea()
-    self.scroll_reporte.setWidgetResizable(True)
-    self.scroll_reporte.setFrameShape(QScrollArea.Shape.NoFrame)
-    self.scroll_reporte.setWidget(self.vista_reporte)
-    self.contenedor_vistas.addWidget(self.scroll_reporte) # Índice 4
-    
-    self.scroll_crear = QScrollArea()
-    self.scroll_crear.setWidgetResizable(True)
-    self.scroll_crear.setFrameShape(QScrollArea.Shape.NoFrame)
-    self.scroll_crear.setWidget(self.vista_crear)
-    self.contenedor_vistas.addWidget(self.scroll_crear) # Índice 5
-    
-    self.scroll_config = QScrollArea()
-    self.scroll_config.setWidgetResizable(True)
-    self.scroll_config.setFrameShape(QScrollArea.Shape.NoFrame)
-    self.scroll_config.setWidget(self.vista_configuracion)
-    self.contenedor_vistas.addWidget(self.scroll_config) # indice 6
-    
-    self.vista_carpetas = PanelCarpetas(self.volver_al_reporte)
-    self.contenedor_vistas.addWidget(self.vista_carpetas) # indice 7
+    # Inicialización de referencias a vistas bajo demanda (Lazy Loading)
+    self._vista_sala = None
+    self._vista_apelaciones = None
+    self._vista_detalle_est = None
+    self._vista_reporte = None
+    self._scroll_reporte = None
+    self._vista_crear = None
+    self._scroll_crear = None
+    self._vista_configuracion = None
+    self._scroll_config = None
+    self._vista_carpetas = None
+    self._vista_admin = None
+    self._vista_reporte_admin = None
 
-    self.vista_admin = PanelAdmin()
-    self.contenedor_vistas.addWidget(self.vista_admin) # indice 8
-    self.indice_admin = self.contenedor_vistas.indexOf(self.vista_admin)
+    # Placeholders en contenedor_vistas para reservar de forma ligera los índices 1 a 9
+    from PyQt6.QtWidgets import QWidget
+    for _ in range(9):
+        self.contenedor_vistas.addWidget(QWidget())
 
-    self.vista_reporte_admin = ReporteInstitucional()
-    self.contenedor_vistas.addWidget(self.vista_reporte_admin) # indice 9
-    self.indice_reporte_admin = self.contenedor_vistas.indexOf(self.vista_reporte_admin)
-    
+    self.indice_admin = 8
+    self.indice_reporte_admin = 9
+
     self.btn_nav_ayuda.clicked.connect(self.mostrar_ayuda)
     self.btn_nav_salir.clicked.connect(self.cerrar_sesion)
     self.btn_nav_tema.clicked.connect(self.alternar_tema)
-    
-    # Conectamos eventos del Flujo de Crear Examen
-    self.boton_crear_examen.clicked.connect(lambda: self.cambiar_vista(5))
-    self.vista_crear.cancelado.connect(lambda: self.cambiar_vista(0))
-    self.vista_crear.siguiente.connect(self.ir_a_configuracion_examen)
-    
-    self.vista_configuracion.anterior.connect(lambda: self.cambiar_vista(5))
-    self.vista_configuracion.finalizado.connect(self.examen_creado_exito)
+
+    # Conectamos eventos del botón de Crear Examen del Dashboard
+    if hasattr(self, 'boton_crear_examen'):
+        self.boton_crear_examen.clicked.connect(lambda: self.cambiar_vista(5))
     
     self.modo_oscuro = False
     
@@ -146,6 +119,161 @@ class VentanaPrincipal(QWidget):
     lbl_aviso.setStyleSheet("color: white; font-size: 26px; font-weight: bold; background-color: transparent;")
     lbl_aviso.setAlignment(Qt.AlignmentFlag.AlignCenter)
     lay_overlay.addWidget(lbl_aviso)
+
+  # --------------------------------------------------------------------------
+  # Gestores de Carga Diferida (Lazy Loading) de Vistas
+  # --------------------------------------------------------------------------
+  def _reemplazar_en_stack(self, indice: int, widget_nuevo):
+      """Reemplaza limpiamente el placeholder en la posicion correspondiente del stack."""
+      widget_antiguo = self.contenedor_vistas.widget(indice)
+      self.contenedor_vistas.removeWidget(widget_antiguo)
+      if widget_antiguo is not None:
+          widget_antiguo.deleteLater()
+      self.contenedor_vistas.insertWidget(indice, widget_nuevo)
+
+  def _aplicar_tema_a_widget(self, widget):
+      """Aplica el tema CSS actual a un widget recién instanciado bajo demanda."""
+      if not widget:
+          return
+      estilo = getattr(self, '_css_oscuro_cache', '') if getattr(self, 'modo_oscuro', False) else getattr(self, '_css_claro_cache', '')
+      if estilo:
+          try:
+              widget.setStyleSheet(estilo)
+          except Exception:
+              pass
+      if hasattr(widget, 'aplicar_tema'):
+          try:
+              widget.aplicar_tema(getattr(self, 'modo_oscuro', False))
+          except Exception:
+              pass
+
+  def obtener_vista_sala(self):
+      if self._vista_sala is None:
+          from vista.sala_supervision import SalaSupervision
+          self._vista_sala = SalaSupervision()
+          self._reemplazar_en_stack(1, self._vista_sala)
+          self._aplicar_tema_a_widget(self._vista_sala)
+      return self._vista_sala
+
+  def obtener_vista_apelaciones(self):
+      if self._vista_apelaciones is None:
+          from vista.panel_apelaciones import PanelApelaciones
+          self._vista_apelaciones = PanelApelaciones()
+          self._reemplazar_en_stack(2, self._vista_apelaciones)
+          self._aplicar_tema_a_widget(self._vista_apelaciones)
+      return self._vista_apelaciones
+
+  def obtener_vista_detalle_est(self):
+      if self._vista_detalle_est is None:
+          from vista.detalle_estudiante import DetalleEstudiante
+          self._vista_detalle_est = DetalleEstudiante(self)
+          self._reemplazar_en_stack(3, self._vista_detalle_est)
+          self._aplicar_tema_a_widget(self._vista_detalle_est)
+      return self._vista_detalle_est
+
+  def obtener_vista_reporte(self):
+      if self._vista_reporte is None:
+          from vista.reporte_ia import ReporteIA
+          from PyQt6.QtWidgets import QScrollArea
+          self._vista_reporte = ReporteIA()
+          self._scroll_reporte = QScrollArea()
+          self._scroll_reporte.setWidgetResizable(True)
+          self._scroll_reporte.setFrameShape(QScrollArea.Shape.NoFrame)
+          self._scroll_reporte.setWidget(self._vista_reporte)
+          self._reemplazar_en_stack(4, self._scroll_reporte)
+          self._aplicar_tema_a_widget(self._vista_reporte)
+      return self._vista_reporte
+
+  def obtener_vista_crear(self):
+      if self._vista_crear is None:
+          from vista.crear_examen import CrearExamen
+          from PyQt6.QtWidgets import QScrollArea
+          self._vista_crear = CrearExamen()
+          self._vista_crear.cancelado.connect(lambda: self.cambiar_vista(0))
+          self._vista_crear.siguiente.connect(self.ir_a_configuracion_examen)
+          self._scroll_crear = QScrollArea()
+          self._scroll_crear.setWidgetResizable(True)
+          self._scroll_crear.setFrameShape(QScrollArea.Shape.NoFrame)
+          self._scroll_crear.setWidget(self._vista_crear)
+          self._reemplazar_en_stack(5, self._scroll_crear)
+          self._aplicar_tema_a_widget(self._vista_crear)
+      return self._vista_crear
+
+  def obtener_vista_configuracion(self):
+      if self._vista_configuracion is None:
+          from vista.configuracion_examen import ConfiguracionExamen
+          from PyQt6.QtWidgets import QScrollArea
+          self._vista_configuracion = ConfiguracionExamen()
+          self._vista_configuracion.anterior.connect(lambda: self.cambiar_vista(5))
+          self._vista_configuracion.finalizado.connect(self.examen_creado_exito)
+          self._scroll_config = QScrollArea()
+          self._scroll_config.setWidgetResizable(True)
+          self._scroll_config.setFrameShape(QScrollArea.Shape.NoFrame)
+          self._scroll_config.setWidget(self._vista_configuracion)
+          self._reemplazar_en_stack(6, self._scroll_config)
+          self._aplicar_tema_a_widget(self._vista_configuracion)
+      return self._vista_configuracion
+
+  def obtener_vista_carpetas(self):
+      if self._vista_carpetas is None:
+          from vista.panel_carpetas import PanelCarpetas
+          self._vista_carpetas = PanelCarpetas(self.volver_al_reporte)
+          self._reemplazar_en_stack(7, self._vista_carpetas)
+          self._aplicar_tema_a_widget(self._vista_carpetas)
+      return self._vista_carpetas
+
+  def obtener_vista_admin(self):
+      if self._vista_admin is None:
+          from vista.panel_admin import PanelAdmin
+          self._vista_admin = PanelAdmin()
+          self._reemplazar_en_stack(8, self._vista_admin)
+          self._aplicar_tema_a_widget(self._vista_admin)
+      return self._vista_admin
+
+  def obtener_vista_reporte_admin(self):
+      if self._vista_reporte_admin is None:
+          from vista.reporte_institucional import ReporteInstitucional
+          self._vista_reporte_admin = ReporteInstitucional()
+          self._reemplazar_en_stack(9, self._vista_reporte_admin)
+          self._aplicar_tema_a_widget(self._vista_reporte_admin)
+      return self._vista_reporte_admin
+
+  # Propiedades para compatibilidad transparente hacia atrás
+  @property
+  def vista_sala(self):
+      return self.obtener_vista_sala()
+
+  @property
+  def vista_apelaciones(self):
+      return self.obtener_vista_apelaciones()
+
+  @property
+  def vista_detalle_est(self):
+      return self.obtener_vista_detalle_est()
+
+  @property
+  def vista_reporte(self):
+      return self.obtener_vista_reporte()
+
+  @property
+  def vista_crear(self):
+      return self.obtener_vista_crear()
+
+  @property
+  def vista_configuracion(self):
+      return self.obtener_vista_configuracion()
+
+  @property
+  def vista_carpetas(self):
+      return self.obtener_vista_carpetas()
+
+  @property
+  def vista_admin(self):
+      return self.obtener_vista_admin()
+
+  @property
+  def vista_reporte_admin(self):
+      return self.obtener_vista_reporte_admin()
 
   def configurar_segregacion_roles(self):
     es_adm = sesion_actual.es_admin()
@@ -230,22 +358,45 @@ class VentanaPrincipal(QWidget):
     else:
         self.overlay_desconexion.hide()
 
-  def cargar_mis_examenes(self):
+  def cargar_mis_examenes(self, callback_finalizado=None):
     if sesion_actual.es_admin():
+      if callback_finalizado:
+          try: callback_finalizado()
+          except Exception: pass
       return
-
-    from api.cliente_respuesta import cliente_api
-    from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
-    from PyQt6.QtCore import Qt
 
     prof_id = sesion_actual.obtener_profesor_id()
     if not prof_id:
+      if callback_finalizado:
+          try: callback_finalizado()
+          except Exception: pass
       return
 
-    exito, examenes = cliente_api.obtener_mis_examenes(prof_id)
-    if not exito:
-      print("Error cargando examenes:", examenes)
-      return
+    from api.cliente_respuesta import cliente_api
+
+    def _tarea_red():
+        return cliente_api.obtener_mis_examenes(prof_id)
+
+    def _al_recibir(resultado):
+        exito, examenes = resultado
+        if not exito:
+            print("Error cargando examenes:", examenes)
+        elif isinstance(examenes, list):
+            self._renderizar_tarjetas_examenes(examenes)
+        if callback_finalizado:
+            try:
+                callback_finalizado()
+            except Exception:
+                pass
+
+    from vista.overlay_carga import HiloTrabajador
+    self._hilo_examenes = HiloTrabajador(_tarea_red)
+    self._hilo_examenes.senal_resultado.connect(_al_recibir)
+    self._hilo_examenes.start()
+
+  def _renderizar_tarjetas_examenes(self, examenes):
+    from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+    from PyQt6.QtCore import Qt
 
     # Limpiar elementos generados dinámicamente si los hay
     if not hasattr(self, 'tarjetas_generadas'):
@@ -863,6 +1014,36 @@ class VentanaPrincipal(QWidget):
     dialogo.exec()
 
   def cambiar_vista(self, indice):
+    indice_anterior = self.contenedor_vistas.currentIndex()
+    # Si salimos de SalaSupervision, cerramos mapa para liberar QWebEngineView y timers
+    if indice_anterior == 1 and indice != 1 and self._vista_sala is not None:
+        if hasattr(self._vista_sala, 'cerrar_mapa'):
+            self._vista_sala.cerrar_mapa()
+    # Si salimos de DetalleEstudiante, detenemos stream y timers
+    if indice_anterior == 3 and indice != 3 and self._vista_detalle_est is not None:
+        if hasattr(self._vista_detalle_est, 'detener_supervision'):
+            self._vista_detalle_est.detener_supervision()
+
+    # Carga bajo demanda del widget correspondiente en el índice si aún no fue instanciado
+    if indice == 1:
+        self.obtener_vista_sala()
+    elif indice == 2:
+        self.obtener_vista_apelaciones()
+    elif indice == 3:
+        self.obtener_vista_detalle_est()
+    elif indice == 4:
+        self.obtener_vista_reporte()
+    elif indice == 5:
+        self.obtener_vista_crear()
+    elif indice == 6:
+        self.obtener_vista_configuracion()
+    elif indice == 7:
+        self.obtener_vista_carpetas()
+    elif indice == getattr(self, 'indice_admin', 8):
+        self.obtener_vista_admin()
+    elif indice == getattr(self, 'indice_reporte_admin', 9):
+        self.obtener_vista_reporte_admin()
+
     self.contenedor_vistas.setCurrentIndex(indice)
     self.actualizar_estilos_sidebar(indice)
     
@@ -871,27 +1052,23 @@ class VentanaPrincipal(QWidget):
       if not sesion_actual.es_admin():
         if hasattr(self, 'overlay_carga') and self.isVisible():
           self.overlay_carga.mostrar("Actualizando dashboard...")
-        try:
+          self.cargar_mis_examenes(callback_finalizado=self.overlay_carga.ocultar)
+        else:
           self.cargar_mis_examenes()
-        finally:
-          if hasattr(self, 'overlay_carga'):
-            self.overlay_carga.ocultar()
     elif indice == 2:
+      vista_ap = self.obtener_vista_apelaciones()
       if hasattr(self, 'overlay_carga') and self.isVisible():
         self.overlay_carga.mostrar("Cargando solicitudes de apelación...")
-      try:
-        self.vista_apelaciones.cargar_apelaciones_reales()
-      finally:
-        if hasattr(self, 'overlay_carga'):
-          self.overlay_carga.ocultar()
+        vista_ap.cargar_apelaciones_reales(callback_finalizado=self.overlay_carga.ocultar)
+      else:
+        vista_ap.cargar_apelaciones_reales()
     elif indice == 4:
+      vista_rep = self.obtener_vista_reporte()
       if hasattr(self, 'overlay_carga') and self.isVisible():
         self.overlay_carga.mostrar("Cargando reportes y exámenes...")
-      try:
-        self.vista_reporte.cargar_examenes()
-      finally:
-        if hasattr(self, 'overlay_carga'):
-          self.overlay_carga.ocultar()
+        vista_rep.cargar_examenes(callback_finalizado=self.overlay_carga.ocultar)
+      else:
+        vista_rep.cargar_examenes()
     elif indice == getattr(self, 'indice_admin', 8):
       if hasattr(self, 'vista_admin'):
         self.vista_admin.cargar_datos()
@@ -941,53 +1118,49 @@ class VentanaPrincipal(QWidget):
       self.aplicar_tema_claro()
 
   def aplicar_tema_claro(self):
+    self.modo_oscuro = False
     self.btn_nav_tema.setText("Modo Noche")
     try:
-      base_path = os.path.dirname(__file__)
-      with open(os.path.join(base_path, "tema_claro.css"), "r", encoding="utf-8") as f:
-        estilo = f.read()
-        self.setStyleSheet(estilo)
-        self.vista_sala.setStyleSheet(estilo)
-        self.vista_apelaciones.setStyleSheet(estilo)
-        self.vista_detalle_est.setStyleSheet(estilo)
-        self.vista_reporte.setStyleSheet(estilo)
-        if hasattr(self, "vista_carpetas"):
-            self.vista_carpetas.setStyleSheet(estilo)
-        if hasattr(self, "vista_admin"):
-            self.vista_admin.setStyleSheet(estilo)
-        if hasattr(self, "vista_reporte_admin"):
-            self.vista_reporte_admin.setStyleSheet(estilo)
+      if not hasattr(self, '_css_claro_cache'):
+        base_path = os.path.dirname(__file__)
+        with open(os.path.join(base_path, "tema_claro.css"), "r", encoding="utf-8") as f:
+          self._css_claro_cache = f.read()
+      estilo = self._css_claro_cache
+      self.setStyleSheet(estilo)
+      for v in [self._vista_sala, self._vista_apelaciones, self._vista_detalle_est, self._vista_reporte, self._vista_carpetas]:
+        if v is not None:
+          v.setStyleSheet(estilo)
+      if self._vista_admin is not None:
+        self._vista_admin.setStyleSheet(estilo)
+        self._vista_admin.aplicar_tema(False)
+      if self._vista_reporte_admin is not None:
+        self._vista_reporte_admin.setStyleSheet(estilo)
+        self._vista_reporte_admin.aplicar_tema(False)
     except Exception as e:
       print(f"Error cargando CSS Claro: {e}")
-    if hasattr(self, "vista_admin"):
-        self.vista_admin.aplicar_tema(False)
-    if hasattr(self, "vista_reporte_admin"):
-        self.vista_reporte_admin.aplicar_tema(False)
     self.actualizar_estilos_sidebar(self.contenedor_vistas.currentIndex())
 
   def aplicar_tema_oscuro(self):
+    self.modo_oscuro = True
     self.btn_nav_tema.setText("Modo Día")
     try:
-      base_path = os.path.dirname(__file__)
-      with open(os.path.join(base_path, "tema_oscuro.css"), "r", encoding="utf-8") as f:
-        estilo = f.read()
-        self.setStyleSheet(estilo)
-        self.vista_sala.setStyleSheet(estilo)
-        self.vista_apelaciones.setStyleSheet(estilo)
-        self.vista_detalle_est.setStyleSheet(estilo)
-        self.vista_reporte.setStyleSheet(estilo)
-        if hasattr(self, "vista_carpetas"):
-            self.vista_carpetas.setStyleSheet(estilo)
-        if hasattr(self, "vista_admin"):
-            self.vista_admin.setStyleSheet(estilo)
-        if hasattr(self, "vista_reporte_admin"):
-            self.vista_reporte_admin.setStyleSheet(estilo)
+      if not hasattr(self, '_css_oscuro_cache'):
+        base_path = os.path.dirname(__file__)
+        with open(os.path.join(base_path, "tema_oscuro.css"), "r", encoding="utf-8") as f:
+          self._css_oscuro_cache = f.read()
+      estilo = self._css_oscuro_cache
+      self.setStyleSheet(estilo)
+      for v in [self._vista_sala, self._vista_apelaciones, self._vista_detalle_est, self._vista_reporte, self._vista_carpetas]:
+        if v is not None:
+          v.setStyleSheet(estilo)
+      if self._vista_admin is not None:
+        self._vista_admin.setStyleSheet(estilo)
+        self._vista_admin.aplicar_tema(True)
+      if self._vista_reporte_admin is not None:
+        self._vista_reporte_admin.setStyleSheet(estilo)
+        self._vista_reporte_admin.aplicar_tema(True)
     except Exception as e:
       print(f"Error cargando CSS Oscuro: {e}")
-    if hasattr(self, "vista_admin"):
-        self.vista_admin.aplicar_tema(True)
-    if hasattr(self, "vista_reporte_admin"):
-        self.vista_reporte_admin.aplicar_tema(True)
     self.actualizar_estilos_sidebar(self.contenedor_vistas.currentIndex())
 
   def cerrar_sesion(self):

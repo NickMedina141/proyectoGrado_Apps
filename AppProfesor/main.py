@@ -33,14 +33,16 @@ if __name__ == '__main__':
     from PyQt6.QtGui import QIcon
     from vista.ventana_login import VentanaLogin
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    try:
-        from utils.actualizador import sincronizar_parches
-        if sincronizar_parches("AppProfesor", base_dir):
-            import subprocess
-            subprocess.Popen([sys.executable, os.path.join(base_dir, "main.py")] + sys.argv[1:])
-            sys.exit(0)
-    except Exception as e:
-        print(f"[ACTUALIZADOR] Error comprobando parches: {e}")
+    # --- SINCRONIZADOR DESACTIVADO EN ENTORNO DE DESARROLLO (VENV) ---
+    # Descomentar al compilar ejecutables finales
+    # try:
+    #     from utils.actualizador import sincronizar_parches
+    #     if sincronizar_parches("AppProfesor", base_dir):
+    #         import subprocess
+    #         subprocess.Popen([sys.executable, os.path.join(base_dir, "main.py")] + sys.argv[1:])
+    #         sys.exit(0)
+    # except Exception as e:
+    #     print(f"[ACTUALIZADOR] Error comprobando parches: {e}")
 
     aplicacion = QApplication(sys.argv)
     aplicacion.setApplicationName("UPC Proctor")

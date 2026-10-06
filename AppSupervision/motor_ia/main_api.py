@@ -81,9 +81,9 @@ def analizar_frame(request: FrameRequest):
     # Ejecutar el análisis de visión (esto dibuja el HUD/landmarks en 'img' para streaming en vivo)
     resultados = analizador_vision.analizar_frame(img)
     
-    # 1. Preview ultra-liviano para streaming continuo al profesor (640x360 cal 55, ~8 KB)
-    stream_preview = cv2.resize(img, (640, 360), interpolation=cv2.INTER_AREA)
-    _, buffer_anotado = cv2.imencode('.jpg', stream_preview, [cv2.IMWRITE_JPEG_QUALITY, 55])
+    # 1. Preview ultra-liviano para streaming continuo al profesor (480x270 cal 45, ~9-12 KB)
+    stream_preview = cv2.resize(img, (480, 270), interpolation=cv2.INTER_AREA)
+    _, buffer_anotado = cv2.imencode('.jpg', stream_preview, [cv2.IMWRITE_JPEG_QUALITY, 45])
     frame_anotado_b64 = base64.b64encode(buffer_anotado).decode('utf-8')
     
     # 2. Snapshot de alta definición (1280x720 HD cal 80) para evidencia forense

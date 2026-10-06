@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QLineEdit, QTableWidget, QTableWidgetItem,
     QHeaderView, QWidget, QFrame, QSizePolicy, QApplication
 )
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, QTimer
 from PyQt6.QtGui import QFont, QIcon, QColor
 
 
@@ -30,6 +30,26 @@ class ModalEstudiantesReporte(QDialog):
         self.codigo_examen = codigo_examen
         self.callback_ver_detalle = callback_ver_detalle
         self.filtro_actual = "TODOS"
+
+        # Timer debounce para evitar reconstruir la tabla en cada tipeo rápido
+        self._timer_buscar = QTimer(self)
+        self._timer_buscar.setSingleShot(True)
+        self._timer_buscar.setInterval(200)
+        self._timer_buscar.timeout.connect(self._aplicar_filtros)
+
+        # Pre-resolver cédulas para acelerar búsquedas y renderizado de la tabla
+        try:
+            from utils.gestor_estudiantes import gestor_estudiantes
+            for e in self.lista_estudiantes:
+                if not e.get("cedula"):
+                    ced = gestor_estudiantes.obtener_cedula(
+                        nombre=e.get("nombre", ""),
+                        estudiante_id=e.get("estudiante_id", "")
+                    )
+                    if ced:
+                        e["cedula"] = ced
+        except Exception:
+            pass
 
         # Dimensiones dinámicas basadas en la pantalla
         _screen = QApplication.primaryScreen().availableSize()
@@ -97,7 +117,7 @@ class ModalEstudiantesReporte(QDialog):
         self.input_buscar.setPlaceholderText("🔍 Buscar por nombre o cédula de estudiante...")
         self.input_buscar.setClearButtonEnabled(True)
         self.input_buscar.setFixedHeight(36)
-        self.input_buscar.textChanged.connect(self._aplicar_filtros)
+        self.input_buscar.textChanged.connect(lambda: self._timer_buscar.start(200))
         lay_tools.addWidget(self.input_buscar, 2)
 
         # Chips de filtro (texto limpio sin círculos de colores)
@@ -150,6 +170,7 @@ class ModalEstudiantesReporte(QDialog):
         return sum(1 for e in self.lista_estudiantes if e.get("categoria_riesgo") == categoria)
 
     def _cambiar_filtro(self, categoria: str):
+        self._timer_buscar.stop()
         self.filtro_actual = categoria
         self._actualizar_estilo_chips()
         self._aplicar_filtros()

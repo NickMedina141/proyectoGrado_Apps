@@ -20,10 +20,15 @@ class DetectorObjetos:
         ruta_yolo = "yolo11s.pt"
     self.modelo = YOLO(ruta_yolo)
     self.objetos_sospechosos = {
-      "cell phone": "celular", "earphones": "audifonos", "book": "libro",
-      "laptop": "computadora portatil", "tablet": "tableta",
-      "headphones": "audifonos"
+      "cell phone": "celular",
+      "book": "libro",
+      "laptop": "computadora portatil"
     }
+    # Resolver índices de clases para filtrar nativamente en YOLO (acelera NMS y reduce CPU)
+    self.clases_indices = [
+        cls_id for cls_id, cls_name in self.modelo.names.items()
+        if cls_name in self.objetos_sospechosos
+    ]
     self.frames_entre_analisis = frames_entre_analisis
     self.contador_frames = 0
     self.ultimo_resultado = []
@@ -155,7 +160,13 @@ class DetectorObjetos:
     
     # Se deshabilita CLAHE: distorsiona el contraste natural con el que YOLO fue entrenado.
     # Usamos una confianza base muy baja (0.15) para capturar todo y luego filtramos por clase.
-    resultados = self.modelo(frame_reducido, verbose=False, conf=self.CONFIANZA_MINIMA, imgsz=640)
+    resultados = self.modelo(
+        frame_reducido,
+        verbose=False,
+        conf=self.CONFIANZA_MINIMA,
+        classes=self.clases_indices,
+        imgsz=640
+    )
     encontrados = []
 
     for resultado in resultados:

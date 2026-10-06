@@ -33,6 +33,10 @@ def sincronizar_parches(nombre_app, base_path):
     Verifica de forma silenciosa si existe un parche de estabilidad en GitHub Releases.
     Retorna True si se aplicó un parche (requiere reiniciar), False en caso contrario.
     """
+    # Desactivado durante desarrollo en entorno virtual (venv / git) para no sobreescribir código local
+    en_venv = (hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix) or 'Scripts' in sys.executable or os.path.exists(os.path.join(base_path, "..", ".git")))
+    if en_venv:
+        return False
     try:
         peticion = urllib.request.Request(
             API_URL, 

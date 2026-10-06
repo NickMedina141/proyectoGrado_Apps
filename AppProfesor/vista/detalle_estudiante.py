@@ -24,6 +24,8 @@ class DetalleEstudiante(QWidget):
             self.stream_audio = None
             self.audio_py = None
         self.sesion_actual_id = ""
+        self._fernet_stream = None
+        self._hilo_refresco_alertas = None
         import time
         self.ultimo_frame_tiempo = time.time()
 
@@ -133,48 +135,78 @@ class DetalleEstudiante(QWidget):
         if getattr(self, 'fraude_marcado_local', False):
             return
 
-        # --- Auto-recuperación y verificación de sesión en segundo plano ---
-        exito_sesion, sesion_info = cliente_api.obtener_sesion(
-            self.sesion_actual_id)
+        # Si ya hay un refresco en segundo plano en curso o no hay sesión, no solapar
+        if not getattr(self, 'sesion_actual_id', None):
+            return
+        if getattr(self, '_hilo_refresco_alertas', None) and self._hilo_refresco_alertas.isRunning():
+            return
 
-        # Si la sesión fue eliminada de la base de datos o figura finalizada/anulada,
-        # consultamos si el estudiante inició una nueva sesión activa para auto-migrar sin botones
-        necesita_buscar_reemplazo = (not exito_sesion) or (
-            isinstance(sesion_info, dict) and sesion_info.get("estadoSesion") in ["FINALIZADA", "ANULADA"])
+        from vista.overlay_carga import HiloTrabajador
+        ses_id = self.sesion_actual_id
+        est_id = getattr(self, 'estudiante_id', None)
+        nom_est = getattr(self, 'nombre_estudiante', None)
+        cod_ex = getattr(getattr(self.main_window, 'vista_sala', None), 'codigo_examen_actual', None)
 
-        if necesita_buscar_reemplazo:
-            cod_ex = getattr(getattr(self.main_window, 'vista_sala', None), 'codigo_examen_actual', None)
-            if cod_ex:
+        def _tarea_red():
+            exito_ses, ses_info = cliente_api.obtener_sesion(ses_id)
+            candidata = None
+            necesita_reemplazo = (not exito_ses) or (
+                isinstance(ses_info, dict) and ses_info.get("estadoSesion") in ["FINALIZADA", "ANULADA"])
+
+            if necesita_reemplazo and cod_ex:
                 ex_ses, lista_ses = cliente_api.obtener_sesiones_examen(cod_ex, todas=True)
                 if ex_ses and isinstance(lista_ses, list):
-                    sesion_candidata = None
                     for s in lista_ses:
                         sid = s.get("sesionId") or s.get("id")
                         eid = s.get("estudianteId")
                         nom = s.get("nombreEstudiante")
                         coincide = False
-                        if self.estudiante_id and eid and str(eid) == str(self.estudiante_id):
+                        if est_id and eid and str(eid) == str(est_id):
                             coincide = True
-                        elif self.nombre_estudiante and nom and nom.strip().lower() == self.nombre_estudiante.strip().lower():
+                        elif nom_est and nom and nom.strip().lower() == nom_est.strip().lower():
                             coincide = True
 
-                        if coincide and sid != self.sesion_actual_id:
+                        if coincide and sid != ses_id:
                             est_s = str(s.get("estadoSesion", "")).upper()
-                            if not exito_sesion:
-                                sesion_candidata = s
+                            if not exito_ses:
+                                candidata = s
                                 if est_s in ["INICIADA", "EN_CURSO", "ACTIVA"]:
                                     break
                             elif est_s in ["INICIADA", "EN_CURSO", "ACTIVA"]:
-                                sesion_candidata = s
+                                candidata = s
                                 break
 
-                    if sesion_candidata:
-                        nueva_id = sesion_candidata.get("sesionId") or sesion_candidata.get("id")
-                        nuevo_nom = sesion_candidata.get("nombreEstudiante", self.nombre_estudiante)
-                        nuevo_eid = sesion_candidata.get("estudianteId", self.estudiante_id)
-                        print(f"[AUTO-SYNC] Sesión actualizada ({nueva_id}) encontrada para {nuevo_nom}. Auto-sincronizando vista...")
-                        self.cargar_datos(nuevo_nom, nueva_id, estudiante_id=nuevo_eid)
-                        return
+            exito_al, lista_al = cliente_api.obtener_alertas(ses_id)
+            return {
+                "sesion_id": ses_id,
+                "exito_sesion": exito_ses,
+                "sesion_info": ses_info,
+                "sesion_candidata": candidata,
+                "exito_alertas": exito_al,
+                "alertas": lista_al if (exito_al and isinstance(lista_al, list)) else []
+            }
+
+        self._hilo_refresco_alertas = HiloTrabajador(_tarea_red)
+        self._hilo_refresco_alertas.senal_resultado.connect(self._al_recibir_datos_refresco)
+        self._hilo_refresco_alertas.start()
+
+    def _al_recibir_datos_refresco(self, datos):
+        if not datos or datos.get("sesion_id") != self.sesion_actual_id:
+            return
+        if getattr(self, 'fraude_marcado_local', False):
+            return
+
+        sesion_candidata = datos.get("sesion_candidata")
+        if sesion_candidata:
+            nueva_id = sesion_candidata.get("sesionId") or sesion_candidata.get("id")
+            nuevo_nom = sesion_candidata.get("nombreEstudiante", self.nombre_estudiante)
+            nuevo_eid = sesion_candidata.get("estudianteId", self.estudiante_id)
+            print(f"[AUTO-SYNC] Sesión actualizada ({nueva_id}) encontrada para {nuevo_nom}. Auto-sincronizando vista...")
+            self.cargar_datos(nuevo_nom, nueva_id, estudiante_id=nuevo_eid)
+            return
+
+        exito_sesion = datos.get("exito_sesion")
+        sesion_info = datos.get("sesion_info")
 
         if exito_sesion and isinstance(sesion_info, dict):
             estado = str(sesion_info.get("estadoSesion", "")).upper()
@@ -264,9 +296,7 @@ class DetalleEstudiante(QWidget):
         # --- Obtención y renderizado del historial de alertas ---
         from utils.formato_tiempo import formatear_hora_local_12h
 
-        exito, alertas = cliente_api.obtener_alertas(self.sesion_actual_id)
-        if not exito or not isinstance(alertas, list):
-            alertas = []
+        alertas = datos.get("alertas", [])
         total_alertas = len(alertas)
         if total_alertas == self.ultima_cantidad_alertas and self.lista_alertas.count() > 0:
             return  # No hay alertas nuevas y ya están pintadas
@@ -385,10 +415,22 @@ class DetalleEstudiante(QWidget):
         layout.addWidget(lbl_desc)
         self.lista_alertas.addWidget(frame)
 
-    def volver_sala(self):
-
-        # Detenemos el stream SOLO al salir explÃ­citamente de la vista (no al minimizar)
+    def detener_supervision(self):
+        """Detiene timers y streams cuando se sale de la vista del estudiante."""
+        if hasattr(self, 'timer_alertas') and self.timer_alertas.isActive():
+            self.timer_alertas.stop()
+        if hasattr(self, 'timer_reintento') and self.timer_reintento.isActive():
+            self.timer_reintento.stop()
+        if hasattr(self, '_hilo_refresco_alertas') and self._hilo_refresco_alertas and self._hilo_refresco_alertas.isRunning():
+            try:
+                self._hilo_refresco_alertas.senal_resultado.disconnect()
+            except Exception:
+                pass
         self.detener_stream()
+
+    def volver_sala(self):
+        # Detenemos stream y timers al salir explícitamente de la vista
+        self.detener_supervision()
         self.main_window.cambiar_vista(1)
 
     def enviar_advertencia(self):
@@ -501,7 +543,7 @@ class DetalleEstudiante(QWidget):
                 w = self.lbl_video_placeholder.width()
                 h = self.lbl_video_placeholder.height()
                 self.lbl_video_placeholder.setPixmap(pixmap.scaled(
-                    w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                    w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation))
         except Exception as e:
             pass
 

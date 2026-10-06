@@ -241,15 +241,28 @@ class SalaSupervision(QWidget):
             self.vista_mapa.page().runJavaScript(f"cargarPines({json_pines});")
 
     def cerrar_mapa(self):
-        self.timer_mapa.stop()
-        self.frame_mapa_contenedor.setVisible(False)
-        self.frame_central.setVisible(True)
-        self.frame_feed_alertas.setVisible(True)
-        while self.layout_mapa.count():
-            item = self.layout_mapa.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
+        if hasattr(self, 'timer_mapa') and self.timer_mapa.isActive():
+            self.timer_mapa.stop()
+        if hasattr(self, 'frame_mapa_contenedor'):
+            self.frame_mapa_contenedor.setVisible(False)
+        if hasattr(self, 'frame_central'):
+            self.frame_central.setVisible(True)
+        if hasattr(self, 'frame_feed_alertas'):
+            self.frame_feed_alertas.setVisible(True)
+        if hasattr(self, 'layout_mapa'):
+            while self.layout_mapa.count():
+                item = self.layout_mapa.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+        if hasattr(self, 'vista_mapa') and self.vista_mapa is not None:
+            try:
+                self.vista_mapa.stop()
+                self.vista_mapa.setPage(None)
+                self.vista_mapa.deleteLater()
+            except Exception:
+                pass
+            self.vista_mapa = None
 
     def mostrar_mapa(self):
         if not self.codigo_examen_actual:
@@ -320,6 +333,9 @@ class SalaSupervision(QWidget):
             self.limpiar_sala()
 
     def limpiar_sala(self):
+        # Cerrar mapa y liberar Chromium si estaba activo
+        self.cerrar_mapa()
+
         # Eliminar tarjetas de estudiantes
         for i in reversed(range(self.layout_grupos.count())):
             item = self.layout_grupos.itemAt(i)

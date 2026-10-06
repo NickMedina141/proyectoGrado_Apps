@@ -3,6 +3,7 @@ import threading
 import numpy as np
 import pyaudio
 import cv2
+import torch
 
 try:
   from silero_vad import load_silero_vad, VADIterator
@@ -101,7 +102,6 @@ class MonitorAudio:
         audio_data = np.frombuffer(data, dtype=np.int16)
         audio_float32 = audio_data.astype(np.float32) / 32768.0
         
-        import torch
         tensor_audio = torch.from_numpy(audio_float32)
         probabilidad = self.modelo(tensor_audio, self.RATE).item()
         

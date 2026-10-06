@@ -253,7 +253,7 @@ class ReporteInstitucional(QWidget):
         self.btn_actualizar = QPushButton("Actualizar Métricas")
         self.btn_actualizar.setObjectName("btn_admin_secundario")
         self.btn_actualizar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_actualizar.clicked.connect(self.cargar_datos)
+        self.btn_actualizar.clicked.connect(lambda: self.cargar_datos(forzar=True))
 
         self.btn_exportar_pdf = QPushButton("Exportar Informe Oficial (PDF)")
         self.btn_exportar_pdf.setObjectName("btn_admin_nuevo")
@@ -500,10 +500,12 @@ class ReporteInstitucional(QWidget):
         return {"widget": w, "valor": v, "detalle": d}
 
     # -- Métodos de carga y datos -----------------------------------------------
-    def cargar_datos(self):
+    def cargar_datos(self, forzar: bool = False):
+        if hasattr(self, 'hilo') and self.hilo is not None and self.hilo.isRunning():
+            return
         self.btn_actualizar.setEnabled(False)
         self.btn_actualizar.setText("Cargando…")
-        self.hilo = HiloAdmin()
+        self.hilo = HiloAdmin(forzar=forzar)
         self.hilo.datos_cargados.connect(self._al_cargar_datos)
         self.hilo.start()
 

@@ -4,7 +4,7 @@
 ; Crea venv e instala dependencias en silencio.
 ; =============================================
 #define MyAppName "Panel Docente UPC"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.1.2"
 #define MyAppPublisher "Universidad Popular del Cesar"
 #define MyAppExeName "PanelDocente_UPC.exe"
 #define SourceDir "."

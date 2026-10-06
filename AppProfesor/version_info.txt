@@ -18,12 +18,12 @@ VSVersionInfo(
         '040904B0',
         [StringStruct('CompanyName', 'Universidad Popular del Cesar'),
         StringStruct('FileDescription', 'UPC Proctor - Portal de Evaluación Docente'),
-        StringStruct('FileVersion', '1.1.0'),
+        StringStruct('FileVersion', '1.1.2'),
         StringStruct('InternalName', 'PanelDocente_UPC'),
         StringStruct('LegalCopyright', 'Universidad Popular del Cesar - Derechos Reservados'),
         StringStruct('OriginalFilename', 'PanelDocente_UPC.exe'),
         StringStruct('ProductName', 'UPC Proctor'),
-        StringStruct('ProductVersion', '1.1.0')])
+        StringStruct('ProductVersion', '1.1.2')])
       ]), 
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]

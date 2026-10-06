@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QFrame, QMessageBox, QApplication, QComboBox, QDialog, QToolButton,
     QMenu, QAbstractItemView, QProgressBar, QFileDialog
 )
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal, QRegularExpression
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal, QRegularExpression, QPoint
 from PyQt6.QtGui import QColor, QFont, QRegularExpressionValidator
 from api.cliente_respuesta import cliente_api
 from utils.gestor_sesion import sesion_actual
@@ -128,10 +128,32 @@ def normalizar_estudiante(e):
 # ----------------------------------------------------------------------------
 # Hilos
 # ----------------------------------------------------------------------------
+# Cache Compartido SuperADMIN (evita re-descargas masivas entre pestañas)
+# ----------------------------------------------------------------------------
+_cache_admin_datos = None
+_cache_admin_timestamp = 0.0
+_CACHE_ADMIN_TTL_SEGUNDOS = 45.0  # Vigencia de 45 segundos
+
+def invalidar_cache_admin():
+    global _cache_admin_datos, _cache_admin_timestamp
+    _cache_admin_datos = None
+    _cache_admin_timestamp = 0.0
+
 class HiloAdmin(QThread):
     datos_cargados = pyqtSignal(bool, dict)
 
+    def __init__(self, forzar: bool = False, parent=None):
+        super().__init__(parent)
+        self.forzar = forzar
+
     def run(self):
+        global _cache_admin_datos, _cache_admin_timestamp
+        import time
+        ahora = time.time()
+        if not self.forzar and _cache_admin_datos is not None and (ahora - _cache_admin_timestamp) < _CACHE_ADMIN_TTL_SEGUNDOS:
+            self.datos_cargados.emit(True, _cache_admin_datos)
+            return
+
         try:
             ex_res, datos_res = cliente_api.admin_obtener_resumen()
             ex_prof, datos_prof = cliente_api.admin_listar_profesores()
@@ -146,6 +168,9 @@ class HiloAdmin(QThread):
                 "detalle": next((m for ok, m in ((ex_res, datos_res), (ex_prof, datos_prof), (ex_est, datos_est))
                                  if not ok and isinstance(m, str)), ""),
             }
+            if resultado["exito"]:
+                _cache_admin_datos = resultado
+                _cache_admin_timestamp = time.time()
             self.datos_cargados.emit(True, resultado)
         except Exception as e:
             self.datos_cargados.emit(False, {"error": str(e)})
@@ -978,14 +1003,18 @@ class TablaUsuarios(QWidget):
         self.buscador.setObjectName("buscador_admin")
         self.buscador.setPlaceholderText(marcador)
         self.buscador.setClearButtonEnabled(True)
-        self.buscador.textChanged.connect(self.refrescar)
+        self._timer_busqueda = QTimer(self)
+        self._timer_busqueda.setSingleShot(True)
+        self._timer_busqueda.setInterval(250)
+        self._timer_busqueda.timeout.connect(self.refrescar)
+        self.buscador.textChanged.connect(lambda: self._timer_busqueda.start(250))
         self.filtro_estado = QComboBox()
         self.filtro_estado.setObjectName("filtro_estado_admin")
         self.filtro_estado.addItem("Todos los estados", "")
         self.filtro_estado.addItem("Activos", "ACTIVO")
         self.filtro_estado.addItem("Suspendidos", "SUSPENDIDO")
         self.filtro_estado.setFixedWidth(170)
-        self.filtro_estado.currentIndexChanged.connect(self.refrescar)
+        self.filtro_estado.currentIndexChanged.connect(lambda: (self._timer_busqueda.stop(), self.refrescar()))
         self.lbl_conteo = QLabel("")
         self.btn_exportar = QPushButton("Exportar Excel")
         self.btn_exportar.setObjectName("btn_admin_secundario")
@@ -1189,10 +1218,13 @@ class TablaUsuarios(QWidget):
         boton.setText("Gestionar")
         boton.setFixedSize(84, 26)
         boton.setCursor(Qt.CursorShape.PointingHandCursor)
-        boton.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        boton.setMenu(self._crear_menu(usuario, boton))
+        boton.clicked.connect(lambda checked=False, b=boton, u=usuario: self._abrir_menu_usuario(b, u))
         lay.addWidget(boton)
         return contenedor
+
+    def _abrir_menu_usuario(self, boton, usuario):
+        menu = self._crear_menu(usuario, boton)
+        menu.exec(boton.mapToGlobal(QPoint(0, boton.height())))
 
     def _menu_contextual(self, pos):
         fila = self.tabla.rowAt(pos.y())
@@ -1245,7 +1277,7 @@ class PanelAdmin(QWidget):
         self.btn_recargar = QPushButton("Actualizar")
         self.btn_recargar.setObjectName("btn_admin_secundario")
         self.btn_recargar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_recargar.clicked.connect(self.cargar_datos)
+        self.btn_recargar.clicked.connect(lambda: self.cargar_datos(forzar=True))
         self.btn_importar = QPushButton("Importar CSV")
         self.btn_importar.setObjectName("btn_admin_secundario")
         self.btn_importar.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1320,12 +1352,14 @@ class PanelAdmin(QWidget):
         return PALETA_OSCURA if self.modo_oscuro else PALETA_CLARA
 
     # -- carga de datos ---------------------------------------------------------
-    def cargar_datos(self):
+    def cargar_datos(self, forzar: bool = False):
         self.btn_recargar.setEnabled(False)
         self.btn_recargar.setText("Cargando…")
-        self.hilo = HiloAdmin()
-        self.hilo.datos_cargados.connect(self._al_cargar_datos)
-        self.hilo.start()
+        hilo = HiloAdmin(forzar=forzar, parent=self)
+        self._hilos.append(hilo)
+        hilo.datos_cargados.connect(self._al_cargar_datos)
+        hilo.finished.connect(lambda: self._hilos.remove(hilo) if hilo in self._hilos else None)
+        hilo.start()
 
     def _al_cargar_datos(self, exito, resultado):
         self.btn_recargar.setEnabled(True)
@@ -1365,6 +1399,7 @@ class PanelAdmin(QWidget):
             QApplication.restoreOverrideCursor()
             self.setEnabled(True)
             if exito:
+                invalidar_cache_admin()
                 al_exito(datos if isinstance(datos, dict) else {})
             else:
                 QMessageBox.warning(self, "No se pudo completar la acción", str(datos))
