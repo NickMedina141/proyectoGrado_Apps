@@ -417,15 +417,15 @@ class VentanaPrincipal(QWidget):
         self.microfono_ok = True
         self.red_ok = True
         if hasattr(self, 'lbl_estado_hardware'):
-            self.lbl_estado_hardware.setText("✓ Dispositivos y audio comprobados")
-            self.lbl_estado_hardware.setStyleSheet("color: #196F3D; font-weight: bold;")
+            self.lbl_estado_hardware.setText("Dispositivos y audio verificados")
+            self.lbl_estado_hardware.setStyleSheet("color: #005928; font-weight: 600;")
     else:
         self.hardware_ok = False
         self.camara_ok = False
         self.microfono_ok = False
         if hasattr(self, 'lbl_estado_hardware'):
-            self.lbl_estado_hardware.setText("⚠️ Hardware no verificado")
-            self.lbl_estado_hardware.setStyleSheet("color: #C0392B; font-weight: bold;")
+            self.lbl_estado_hardware.setText("Verificación técnica pendiente")
+            self.lbl_estado_hardware.setStyleSheet("color: #C0392B; font-weight: 600;")
     self._actualizar_estado_boton_ingreso()
 
   def _actualizar_estado_boton_ingreso(self):

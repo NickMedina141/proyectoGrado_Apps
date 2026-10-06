@@ -72,7 +72,7 @@ class MonitorSistema:
         
         self.activo = False
         self.hilo_monitoreo = None
-        self.intervalo = 0.5 # Revisión frecuente (cada 500 ms) para responder con precisión
+        self.intervalo = 1.0 # Intervalo óptimo de 1.0s para máxima reactividad con mínimo consumo de CPU
         self.funcion_alerta = funcion_alerta
         
         # Control de captura infraganti con estabilización de renderizado
@@ -216,16 +216,25 @@ class MonitorSistema:
             time.sleep(self.intervalo)
 
     def _neutralizar_taskmgr(self):
-        """Cierra inmediatamente cualquier intento de abrir el Administrador de Tareas"""
-        for proc in psutil.process_iter(['name']):
-            try:
-                if proc.info['name'] and proc.info['name'].lower() == 'taskmgr.exe':
-                    proc.terminate()
-                    if "TASKMGR" not in self.alertas_persistentes_enviadas:
-                        self._enviar_evidencia_sistema("ADMINISTRADOR_TAREAS_BLOQUEADO", "ALTO", "El estudiante intentó abrir el Administrador de Tareas y fue cerrado de inmediato.")
-                        self.alertas_persistentes_enviadas.add("TASKMGR")
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
+        """Cierra inmediatamente cualquier intento de abrir el Administrador de Tareas vía Win32 API O(1)"""
+        try:
+            user32 = ctypes.windll.user32
+            hwnd = user32.FindWindowW("TaskManagerWindow", None)
+            if hwnd:
+                user32.PostMessageW(hwnd, 0x0010, 0, 0)  # WM_CLOSE
+                pid = wintypes.DWORD(0)
+                user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                if pid.value > 0:
+                    try:
+                        p = psutil.Process(pid.value)
+                        p.terminate()
+                    except Exception:
+                        pass
+                if "TASKMGR" not in self.alertas_persistentes_enviadas:
+                    self._enviar_evidencia_sistema("ADMINISTRADOR_TAREAS_BLOQUEADO", "ALTO", "El estudiante intentó abrir el Administrador de Tareas y fue cerrado de inmediato.")
+                    self.alertas_persistentes_enviadas.add("TASKMGR")
+        except Exception:
+            pass
 
     def _comprobar_entorno(self):
         # Deteccion exhaustiva de Maquina Virtual (Firmware, BIOS, SCSI y Procesos)

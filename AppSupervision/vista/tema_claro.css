@@ -233,3 +233,150 @@ QMessageBox QPushButton {
     min-width: 80px;
     padding: 5px;
 }
+
+/* ========================================================= */
+/* MODAL DE DIAGNÓSTICO INSTITUCIONAL (HARDWARE Y ENTORNO)  */
+/* ========================================================= */
+
+QDialog#ModalDiagnosticoHardware {
+    background-color: #FFFFFF;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+}
+
+QFrame#panel_diagnostico {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+}
+
+/* Badges dinámicos de diagnóstico por propiedad 'estado' */
+QLabel#badge_diagnostico[estado="ok"] {
+    background-color: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+QLabel#badge_diagnostico[estado="error"] {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+QLabel#badge_diagnostico[estado="pendiente"] {
+    background-color: #F1F5F9;
+    color: #475569;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+QLabel#badge_diagnostico[estado="aviso"] {
+    background-color: #FFFBEB;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+/* Vúmetro de Audio */
+QProgressBar#barra_vumetro {
+    border: 1px solid #CBD5E1;
+    border-radius: 3px;
+    background-color: #EDF2F7;
+    height: 7px;
+}
+QProgressBar#barra_vumetro::chunk {
+    background-color: #005928;
+    border-radius: 2px;
+}
+
+/* Banners dinámicos de diagnóstico por propiedad 'estado' */
+QLabel#banner_diagnostico[estado="espera"] {
+    background-color: #F8FAFC;
+    color: #475569;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 12px;
+}
+
+QLabel#banner_diagnostico[estado="exito"] {
+    background-color: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+QLabel#banner_diagnostico[estado="error"] {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+QLabel#banner_diagnostico[estado="aviso"] {
+    background-color: #FFFBEB;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 12px;
+}
+
+/* Botones de Acción del Modal */
+QPushButton#btn_cerrar_apps {
+    background-color: #DC2626;
+    color: #FFFFFF;
+    font-weight: 600;
+    font-size: 12px;
+    border-radius: 6px;
+    padding: 8px 14px;
+    border: none;
+}
+QPushButton#btn_cerrar_apps:hover {
+    background-color: #B91C1C;
+}
+
+QPushButton#btn_reintentar {
+    background-color: #FFFFFF;
+    color: #005928;
+    border: 1px solid #005928;
+    font-weight: 600;
+    font-size: 12px;
+    border-radius: 6px;
+    padding: 8px 14px;
+}
+QPushButton#btn_reintentar:hover {
+    background-color: #F0FDF4;
+}
+
+QPushButton#btn_cancelar {
+    background-color: #F1F5F9;
+    color: #475569;
+    border: 1px solid #CBD5E1;
+    font-weight: 600;
+    font-size: 12px;
+    border-radius: 6px;
+    padding: 8px 14px;
+}
+QPushButton#btn_cancelar:hover {
+    background-color: #E2E8F0;
+}

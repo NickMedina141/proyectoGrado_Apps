@@ -1434,10 +1434,21 @@ class PanelCarpetas(QWidget):
         
         fila = 0
         col = 0
-        max_cols = 4 
+        max_cols = 3 
         
         for c in range(max_cols):
             grid.setColumnStretch(c, 1)
+
+        # Cifrador reutilizable para no ralentizar el renderizado de miniaturas
+        fernet_cipher = None
+        try:
+            from cryptography.fernet import Fernet
+            from config.configuracion import AES_SECRET_KEY
+            fernet_cipher = Fernet(AES_SECRET_KEY)
+        except Exception:
+            pass
+
+        import re
             
         for i, archivo in enumerate(archivos):
             ruta_completa = os.path.join(ruta_carpeta, archivo)
@@ -1450,7 +1461,21 @@ class PanelCarpetas(QWidget):
             lay_c.setContentsMargins(15, 15, 15, 15)
             
             nombre_sin_ext = os.path.splitext(archivo)[0]
-            lbl_info = QLabel(f"<b>{nombre_sin_ext}</b>")
+            nombre_legible = nombre_sin_ext.replace("_", " ")
+
+            match_ev = re.match(r"^evidencia([A-Za-z]+?)(\d+)\s*(.*)$", nombre_legible, re.IGNORECASE)
+            if match_ev:
+                tipo_ev, num_ev, resto = match_ev.groups()
+                resto_limpio = resto.strip()
+                if resto_limpio:
+                    texto_label = f"<div style='text-align: center; line-height: 120%;'><b>Evidencia #{num_ev}</b><br><span style='font-size: 11px; color: #555555;'>{resto_limpio}</span></div>"
+                else:
+                    texto_label = f"<div style='text-align: center;'><b>Evidencia #{num_ev} ({tipo_ev.capitalize()})</b></div>"
+            else:
+                texto_label = f"<div style='text-align: center;'><b>{nombre_legible}</b></div>"
+
+            lbl_info = QLabel(texto_label)
+            lbl_info.setTextFormat(Qt.TextFormat.RichText)
             lbl_info.setWordWrap(True)
             lbl_info.setToolTip(archivo)
             lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1466,24 +1491,22 @@ class PanelCarpetas(QWidget):
             
             if es_imagen:
                 try:
-                    from cryptography.fernet import Fernet
-                    from config.configuracion import AES_SECRET_KEY
-                    f = Fernet(AES_SECRET_KEY)
                     with open(ruta_completa, 'rb') as file_obj:
                         datos = file_obj.read()
-                    try:
-                        datos = f.decrypt(datos)
-                    except:
-                        pass
+                    if fernet_cipher:
+                        try:
+                            datos = fernet_cipher.decrypt(datos)
+                        except Exception:
+                            pass
                     pixmap = QPixmap()
                     pixmap.loadFromData(datos)
                     if not pixmap.isNull():
-                        pix_scaled = pixmap.scaled(200, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                        pix_scaled = pixmap.scaled(200, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                         lbl_img.setPixmap(pix_scaled)
                     else:
                         lbl_img.setText("📷")
                         lbl_img.setStyleSheet("font-size: 40px; border: none; background: transparent;")
-                except:
+                except Exception:
                     lbl_img.setText("📷")
                     lbl_img.setStyleSheet("font-size: 40px; border: none; background: transparent;")
             else:

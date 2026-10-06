@@ -79,6 +79,29 @@ PROCESOS_CAMARAS_VIRTUALES = {
     "epoccam.exe": "Elgato EpocCam"
 }
 
+# Catálogo consolidado de aplicaciones comunes de mensajería, navegadores externos y launchers
+PROCESOS_APLICACIONES_COMUNES = {
+    "discord.exe": "Discord",
+    "telegram.exe": "Telegram",
+    "whatsapp.exe": "WhatsApp",
+    "spotify.exe": "Spotify",
+    "steam.exe": "Steam",
+    "epicgameslauncher.exe": "Epic Games",
+    "chatgpt.exe": "ChatGPT",
+    "notion.exe": "Notion",
+    "slack.exe": "Slack",
+    "zoom.exe": "Zoom",
+    "teams.exe": "Microsoft Teams",
+    "skype.exe": "Skype",
+    "chrome.exe": "Google Chrome",
+    "msedge.exe": "Microsoft Edge",
+    "firefox.exe": "Mozilla Firefox",
+    "brave.exe": "Brave Browser",
+    "opera.exe": "Opera Browser",
+}
+
+INTERFACES_VPN = ('tun', 'tap', 'vpn', 'wireguard', 'nord', 'openvpn', 'tailscale', 'warp', 'surfshark')
+
 def limpiar_portapapeles_sistema():
     """Vacía el portapapeles de Windows para neutralizar copiado/pegado sincronizado desde celulares"""
     try:
@@ -173,7 +196,7 @@ class BlindajeAntiRemoto:
         self.funcion_alerta = funcion_alerta
         self.activo = False
         self.hilo_vigilancia = None
-        self.intervalo = 2.0  # Chequeo cada 2 segundos
+        self.intervalo = 5.0  # Chequeo cada 5.0 segundos (balance óptimo CPU/seguridad)
         self.apps_detectadas_reportadas = set()
         self.rdp_reportado = False
         self.monitores_reportados = False
@@ -229,6 +252,86 @@ class BlindajeAntiRemoto:
             return user32.GetSystemMetrics(SM_CMONITORS)
         except Exception:
             return 1
+
+    def es_vpn_activa(self) -> bool:
+        """Determina si existe una interfaz de red VPN activa en el sistema operativo"""
+        try:
+            interfaces = psutil.net_if_addrs()
+            stats = psutil.net_if_stats()
+            for if_name in interfaces.keys():
+                if any(k in if_name.lower() for k in INTERFACES_VPN):
+                    if if_name in stats and stats[if_name].isup:
+                        return True
+        except Exception:
+            pass
+        return False
+
+    def escanear_procesos_bloqueantes(self) -> tuple[list[tuple[int, str, str]], list[str]]:
+        """
+        Realiza UN ÚNICO barrido optimizado de procesos buscando software de control remoto,
+        cámaras virtuales y aplicaciones comunes no autorizadas activas antes del examen.
+        Retorna (lista_tuplas_pid_nombre_desc, lista_nombres_unicos_legibles).
+        """
+        try:
+            from motor_ia.sistema import PROCESOS_SISTEMA_BASE
+        except Exception:
+            PROCESOS_SISTEMA_BASE = set()
+
+        catalogo_total = {}
+        catalogo_total.update(PROCESOS_CONTROL_REMOTO)
+        catalogo_total.update(PROCESOS_CAMARAS_VIRTUALES)
+        catalogo_total.update(PROCESOS_APLICACIONES_COMUNES)
+
+        mi_pid = os.getpid()
+        encontrados = []
+        nombres_unicos_map = {}
+
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                pid = proc.info['pid']
+                nombre = (proc.info['name'] or "").lower()
+                if pid == mi_pid or pid == 0:
+                    continue
+                if nombre in PROCESOS_SISTEMA_BASE:
+                    continue
+                if nombre in catalogo_total:
+                    desc = catalogo_total[nombre]
+                    encontrados.append((pid, nombre, desc))
+                    nombres_unicos_map[desc] = True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+
+        return encontrados, list(nombres_unicos_map.keys())
+
+    def sanitizar_aplicaciones_bloqueantes(self, lista_procesos=None) -> list[str]:
+        """
+        Termina limpiamente las aplicaciones no permitidas detectadas.
+        Si no se pasa una lista, ejecuta un escaneo rápido y las finaliza.
+        Retorna la lista de nombres de aplicaciones cerradas.
+        """
+        if lista_procesos is None:
+            lista_procesos, _ = self.escanear_procesos_bloqueantes()
+
+        terminados = []
+        for pid, nombre, desc in lista_procesos:
+            try:
+                proc = psutil.Process(pid)
+                proc.terminate()
+                terminados.append(desc or nombre)
+            except Exception:
+                pass
+
+        time.sleep(0.3)
+        for pid, nombre, desc in lista_procesos:
+            try:
+                if psutil.pid_exists(pid):
+                    proc = psutil.Process(pid)
+                    proc.kill()
+            except Exception:
+                pass
+
+        limpiar_portapapeles_sistema()
+        return list(dict.fromkeys(terminados))
 
     def detectar_procesos_remotos_activos(self) -> list[tuple[str, str]]:
         """Retorna lista de (nombre_proceso, descripcion) de programas de control remoto activos"""

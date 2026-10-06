@@ -93,7 +93,7 @@ class DetalleEstudiante(QWidget):
         # -------------------------------------------
         if not hasattr(self, 'timer_alertas') or not self.timer_alertas:
             self.timer_alertas = QTimer(self)
-            self.timer_alertas.setInterval(3000)
+            self.timer_alertas.setInterval(4500)
             self.timer_alertas.timeout.connect(self.refrescar_alertas)
         self.ultima_cantidad_alertas = -1
 
@@ -299,7 +299,7 @@ class DetalleEstudiante(QWidget):
 
         # Inyectar las alertas
         for al in alertas:
-            titulo = al.get("claseAlerta", "Alerta General")
+            titulo = str(al.get("claseAlerta", "Alerta General")).upper()
 
             # Formatear la descripción dinámicamente según el tipo de alerta
             if titulo in ["VISION", "OBJETO"]:
@@ -317,9 +317,27 @@ class DetalleEstudiante(QWidget):
                 cat = al.get("categoriaProceso", "")
                 descripcion = f"Proceso prohibido: {proc} ({cat})"
             elif titulo == "TECLADO":
-                patron = al.get("patronSospechoso", "")
-                teclas = al.get("combinacionTeclas", "")
-                descripcion = f"Detectado: {teclas}"
+                teclas = (
+                    al.get("combinacionTeclas")
+                    or al.get("patronSospechoso")
+                    or al.get("nombreProceso")
+                    or al.get("detalle")
+                    or al.get("descripcion")
+                    or "Atajo no permitido"
+                )
+                if str(teclas).strip().lower() in ["none", "null", ""]:
+                    teclas = al.get("nombreProceso") or al.get("detalle") or al.get("descripcion") or "Atajo no permitido"
+                    if str(teclas).strip().lower() in ["none", "null", ""]:
+                        teclas = "Atajo no permitido"
+
+                # Si viene como slug con guiones bajos (ej: TECLA_WINDOWS_BLOQUEADA), formatearlo a texto limpio
+                if isinstance(teclas, str) and "_" in teclas and (teclas.isupper() or "_BLOQUEAD" in teclas):
+                    teclas = teclas.replace("_BLOQUEADO", "").replace("_BLOQUEADA", "").replace("_", " ").title()
+
+                if isinstance(teclas, str) and teclas.startswith("Detectado:"):
+                    descripcion = teclas
+                else:
+                    descripcion = f"Detectado: {teclas}"
             elif titulo == "SESION_DUPLICADA":
                 proc = al.get("nombreProceso", "")
                 cat = al.get("categoriaProceso", "")
@@ -467,10 +485,11 @@ class DetalleEstudiante(QWidget):
             # --- DESCIFRADO E2EE AES-256 EN STREAMING ---
             if base64_str.startswith("gAAAAA"):
                 try:
-                    from cryptography.fernet import Fernet
-                    from config.configuracion import AES_SECRET_KEY
-                    f_crypto = Fernet(AES_SECRET_KEY)
-                    base64_str = f_crypto.decrypt(
+                    if not hasattr(self, '_fernet_stream') or self._fernet_stream is None:
+                        from cryptography.fernet import Fernet
+                        from config.configuracion import AES_SECRET_KEY
+                        self._fernet_stream = Fernet(AES_SECRET_KEY)
+                    base64_str = self._fernet_stream.decrypt(
                         base64_str.encode('utf-8')).decode('utf-8')
                 except Exception as e:
                     pass  # Fallback

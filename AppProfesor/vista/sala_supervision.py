@@ -707,12 +707,22 @@ class SalaSupervision(QWidget):
             f"font-weight: bold; font-size: 14px; color: {color_nombre};")
         layout.addWidget(lbl_nombre)
 
-        # Extraer descrpcion dinamica
+        # Extraer descripcion dinamica
         desc = alerta.get("descripcion", alerta.get("mensaje", ""))
-        if not desc:
+        if not desc or str(desc).strip().lower() in ["none", "null"]:
             obj = alerta.get("objetoDetectado", "")
             if obj:
                 desc = f"Objeto: {obj}"
+            elif alerta.get("combinacionTeclas"):
+                teclas_str = str(alerta.get("combinacionTeclas"))
+                if "_" in teclas_str and (teclas_str.isupper() or "_BLOQUEAD" in teclas_str):
+                    teclas_str = teclas_str.replace("_BLOQUEADO", "").replace("_BLOQUEADA", "").replace("_", " ").title()
+                desc = f"Atajo bloqueado: {teclas_str}"
+            elif alerta.get("nombreProceso"):
+                proc_str = str(alerta.get("nombreProceso"))
+                if "_" in proc_str and proc_str.isupper():
+                    proc_str = proc_str.replace("_", " ").title()
+                desc = f"Proceso: {proc_str}"
 
         if desc:
             lbl_desc = QLabel(desc)

@@ -86,6 +86,8 @@ class GestorModoKiosko:
         self.hilo_vigilancia_foco = None
         self.vigilancia_foco_activa = False
         self.procesos_permitidos_examen = set()
+        self._cooldown_teclas = {}
+        self._cooldown_foco = 0.0
         
         # Registrar restauración automática obligatoria al salir del proceso
         atexit.register(self.desactivar_kiosko)
@@ -258,11 +260,14 @@ class GestorModoKiosko:
                             if not es_sistema:
                                 contador_fuera += 1
                                 if contador_fuera >= 2:
-                                    self._emitir_alerta_tecla(
-                                        "DESVIO_FOCO_O_ESCRITORIO_VIRTUAL",
-                                        "ALTO",
-                                        "La ventana del examen perdió el foco principal frente a otra aplicación o escritorio."
-                                    )
+                                    ahora = time.time()
+                                    if ahora >= self._cooldown_foco:
+                                        self._cooldown_foco = ahora + 20.0
+                                        self._emitir_alerta_tecla(
+                                            "DESVIO_FOCO_O_ESCRITORIO_VIRTUAL",
+                                            "ALTO",
+                                            "La ventana del examen perdió el foco principal frente a otra aplicación o escritorio."
+                                        )
                                     # Forzar retorno inmediato a pantalla completa en primer plano
                                     user32.ShowWindow(hwnd_kiosko, 3) # SW_MAXIMIZE
                                     user32.SetForegroundWindow(hwnd_kiosko)
@@ -408,16 +413,26 @@ class GestorModoKiosko:
             print("[KIOSKO] Hook WH_KEYBOARD_LL desinstalado.")
 
     def _emitir_alerta_tecla(self, evento: str, nivel: str, detalle: str):
+        import time
+        ahora = time.time()
+        if self._cooldown_teclas.get(evento, 0) > ahora:
+            return
+        self._cooldown_teclas[evento] = ahora + 3.0  # 3 segundos de cooldown por tecla
+
         if self.funcion_alerta:
             try:
+                nombre_legible = evento.replace("_BLOQUEADO", "").replace("_BLOQUEADA", "").replace("_", " ").title()
                 evidencia = {
                     "claseAlerta": "TECLADO",
                     "nivelRiesgo": nivel,
+                    "combinacionTeclas": nombre_legible,
+                    "patronSospechoso": "ATAJO_PROHIBIDO",
                     "pidProceso": 0,
                     "nombreProceso": evento,
                     "categoriaProceso": "CONTROL_REMOTO",
                     "accionTomada": "BLOQUEADO",
-                    "detalle": detalle
+                    "detalle": detalle,
+                    "descripcion": f"Atajo no permitido: {nombre_legible} ({detalle})"
                 }
                 self.funcion_alerta(evidencia)
             except Exception:
