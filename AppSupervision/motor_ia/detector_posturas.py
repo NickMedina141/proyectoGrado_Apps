@@ -100,6 +100,7 @@ class DetectorPostura:
 
     puntos_lista = resultado_mp.pose_landmarks[0]
     lm = puntos_lista
+    frame_limpio_evidencia = frame.copy()
 
     #Dibujar esqueleto liviano
     self.dibujo_mp.draw_landmarks(
@@ -116,7 +117,7 @@ class DetectorPostura:
     # Verificar giro lateral de hombros
     angulo_hombros = self._calcular_angulo_hombros(lm, ancho, alto)
     datos["angulo_hombros"] = angulo_hombros
-    self._verificar_giro(angulo_hombros, datos, frame)
+    self._verificar_giro(angulo_hombros, datos, frame_limpio_evidencia)
 
     # Verificar si las manos estan visibles
     manos_visibles = self._verificar_manos(lm, alto)
@@ -130,13 +131,13 @@ class DetectorPostura:
     if sum(self.historial_manos) / max(1, tamano_ventana) >= 0.85 and (ahora - self.ultimo_reporte > 10.0):
         alerta = "MANOS_NO_VISIBLES"
         datos["alertas"].append(alerta)
-        if self.funcion_alerta: self.funcion_alerta(alerta, 1.0, frame.copy())
+        if self.funcion_alerta: self.funcion_alerta(alerta, 1.0, frame_limpio_evidencia.copy())
         self.ultimo_reporte = ahora
         self.historial_manos = []
     
 
     #Verificar que el estudiante siga sentado
-    self._verificar_posicion_sentado(lm, ancho, alto, datos, frame)
+    self._verificar_posicion_sentado(lm, ancho, alto, datos, frame_limpio_evidencia)
 
     # HRUD en pantalla
     self.dibujar_hud(frame, datos)

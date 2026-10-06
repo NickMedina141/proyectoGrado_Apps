@@ -10,23 +10,168 @@ class LineaDeTiempoWidget(QWidget):
         super().__init__()
         self.fn_abrir_categoria = fn_abrir_categoria
         self.fn_abrir_archivo = fn_abrir_archivo
-        self.setMinimumHeight(300)
-        self.setFixedHeight(310)
+        self.setMinimumHeight(330)
+        self.setFixedHeight(330)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.eventos = []
         self.items_render = []
         self.hovered_idx = None
         self.hovered_card_rect = None
+        self.cache_thumbnails = {}
         self.t_min = 0
         self.t_max = 0
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         
+        # Atributos de reproductor de audio integrado (WhatsApp style)
+        self.audio_player = None
+        self.audio_output = None
+        self.audio_reproduciendo_ruta = None
+        self.audio_pos_ms = 0
+        self.audio_dur_ms = 0
+        self.audio_temp_path = None
+        self.rect_audio_btn = None
+        self.rect_audio_wave = None
+        
+    def _obtener_thumbnail(self, ruta_archivo):
+        if not ruta_archivo or not os.path.exists(ruta_archivo):
+            return None
+        if ruta_archivo in self.cache_thumbnails:
+            return self.cache_thumbnails[ruta_archivo]
+            
+        try:
+            from cryptography.fernet import Fernet
+            from config.configuracion import AES_SECRET_KEY
+            import base64
+            from PyQt6.QtGui import QPixmap
+            
+            with open(ruta_archivo, 'rb') as f:
+                data = f.read()
+                
+            pixmap = QPixmap()
+            try:
+                f_crypto = Fernet(AES_SECRET_KEY)
+                dec = f_crypto.decrypt(data).decode('utf-8')
+                raw_bytes = base64.b64decode(dec)
+                pixmap.loadFromData(raw_bytes)
+            except Exception:
+                pixmap.loadFromData(data)
+                
+            if not pixmap.isNull():
+                thumb = pixmap.scaled(72, 54, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+                x_crop = max(0, (thumb.width() - 72) // 2)
+                y_crop = max(0, (thumb.height() - 54) // 2)
+                thumb_cropped = thumb.copy(x_crop, y_crop, 72, 54)
+                self.cache_thumbnails[ruta_archivo] = thumb_cropped
+                return thumb_cropped
+        except Exception:
+            pass
+        return None
+
+    def _inicializar_audio(self):
+        if self.audio_player is None:
+            try:
+                from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+                self.audio_player = QMediaPlayer(self)
+                self.audio_output = QAudioOutput(self)
+                self.audio_player.setAudioOutput(self.audio_output)
+                self.audio_player.positionChanged.connect(self._al_audio_pos_changed)
+                self.audio_player.durationChanged.connect(self._al_audio_dur_changed)
+                self.audio_player.playbackStateChanged.connect(self._al_audio_state_changed)
+            except Exception as e:
+                print(f"[TimelineAudio] Error inicializando QtMultimedia: {e}")
+
+    def _al_audio_pos_changed(self, pos_ms):
+        self.audio_pos_ms = pos_ms
+        self.update()
+
+    def _al_audio_dur_changed(self, dur_ms):
+        self.audio_dur_ms = dur_ms
+        self.update()
+
+    def _al_audio_state_changed(self, state):
+        self.update()
+
+    def _toggle_audio(self, ruta_archivo):
+        if not ruta_archivo or not os.path.exists(ruta_archivo):
+            return
+        self._inicializar_audio()
+        if not self.audio_player:
+            return
+            
+        from PyQt6.QtMultimedia import QMediaPlayer
+        from PyQt6.QtCore import QUrl
+        
+        # Si ya se está reproduciendo este archivo, pausar
+        if self.audio_reproduciendo_ruta == ruta_archivo and self.audio_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.audio_player.pause()
+            return
+            
+        # Si estaba pausado este archivo, reanudar
+        if self.audio_reproduciendo_ruta == ruta_archivo and self.audio_player.playbackState() == QMediaPlayer.PlaybackState.PausedState:
+            self.audio_player.play()
+            return
+            
+        # Nuevo archivo a reproducir
+        self.audio_player.stop()
+        self.audio_reproduciendo_ruta = ruta_archivo
+        self.audio_pos_ms = 0
+        self.audio_dur_ms = 0
+        
+        ruta_a_reproducir = ruta_archivo
+        try:
+            with open(ruta_archivo, 'rb') as f:
+                datos = f.read()
+            datos_final = datos
+            try:
+                from cryptography.fernet import Fernet
+                from config.configuracion import AES_SECRET_KEY
+                import base64
+                f_crypto = Fernet(AES_SECRET_KEY)
+                dec_fernet = f_crypto.decrypt(datos)
+                # El contenido descifrado con Fernet es texto base64
+                try:
+                    datos_final = base64.b64decode(dec_fernet.decode('utf-8'))
+                except Exception:
+                    try:
+                        datos_final = base64.b64decode(dec_fernet)
+                    except Exception:
+                        datos_final = dec_fernet
+            except Exception:
+                try:
+                    import base64
+                    datos_final = base64.b64decode(datos)
+                except Exception:
+                    datos_final = datos
+                    
+            import tempfile
+            fd, temp_path = tempfile.mkstemp(suffix=".wav")
+            with os.fdopen(fd, 'wb') as f_tmp:
+                f_tmp.write(datos_final)
+            self.audio_temp_path = temp_path
+            ruta_a_reproducir = temp_path
+        except Exception as e:
+            print(f"[TimelineAudio] Error preparando audio: {e}")
+            
+        self.audio_player.setSource(QUrl.fromLocalFile(ruta_a_reproducir))
+        self.audio_player.play()
+
+    def _detener_audio(self):
+        if self.audio_player:
+            from PyQt6.QtMultimedia import QMediaPlayer
+            if self.audio_player.playbackState() != QMediaPlayer.PlaybackState.StoppedState:
+                self.audio_player.stop()
+            self.audio_reproduciendo_ruta = None
+            self.audio_pos_ms = 0
+        
     def cargar_eventos(self, ruta_evidencias):
         self.eventos.clear()
+        self.cache_thumbnails.clear()
         self.hovered_idx = None
         self.hovered_card_rect = None
+        self._detener_audio()
         if not ruta_evidencias:
+            self.setMinimumWidth(1100)
             self.update()
             return
             
@@ -60,6 +205,7 @@ class LineaDeTiempoWidget(QWidget):
                         })
                         
         if not self.eventos:
+            self.setMinimumWidth(1100)
             self.update()
             return
             
@@ -69,6 +215,13 @@ class LineaDeTiempoWidget(QWidget):
         padding = max(45, duracion_real * 0.08)
         self.t_min = self.eventos[0]['time'] - padding
         self.t_max = self.eventos[-1]['time'] + padding
+        
+        # Ajustar ancho dinámico para garantizar scroll horizontal amplio sin amontonamiento
+        espaciado = 75
+        margen_x = 85
+        ancho_necesario = max(1100, (margen_x * 2) + (len(self.eventos) * espaciado))
+        self.setMinimumWidth(ancho_necesario)
+        self.resize(ancho_necesario, 330)
         self.update()
 
     def _dibujar_bandera_3d_ribbon(self, painter, x, y, titulo, hora, es_inicio=True):
@@ -272,39 +425,72 @@ class LineaDeTiempoWidget(QWidget):
     def mouseMoveEvent(self, event):
         pos = event.position()
         nuevo_hover = None
-        for it in self.items_render:
-            hitbox = it.get('hitbox')
-            if hitbox and hitbox.contains(pos):
-                nuevo_hover = it['idx']
-                break
+        # Si el cursor se encuentra dentro de la tarjeta flotante, preservar el hover para interactuar
+        if self.hovered_card_rect and self.hovered_card_rect.contains(pos):
+            nuevo_hover = self.hovered_idx
+        else:
+            for it in self.items_render:
+                hitbox = it.get('hitbox')
+                if hitbox and hitbox.contains(pos):
+                    nuevo_hover = it['idx']
+                    break
         if nuevo_hover != self.hovered_idx:
+            # Si cambia de nodo o sale, detener audio previo
+            if nuevo_hover is None or (self.hovered_idx is not None and nuevo_hover != self.hovered_idx):
+                self._detener_audio()
             self.hovered_idx = nuevo_hover
             self.update()
 
     def leaveEvent(self, event):
+        self._detener_audio()
         if self.hovered_idx is not None:
             self.hovered_idx = None
             self.update()
 
     def mousePressEvent(self, event):
         pos = event.position()
+        ev_target = None
+        
+        # 1. Clic sobre la tarjeta flotante interactiva
         if self.hovered_card_rect and self.hovered_card_rect.contains(pos):
             if self.hovered_idx is not None and 0 <= self.hovered_idx < len(self.eventos):
-                ev = self.eventos[self.hovered_idx]
-                if self.fn_abrir_archivo and ev.get('ruta') and os.path.exists(ev.get('ruta')):
-                    self.fn_abrir_archivo(ev['ruta'])
+                ev_target = self.eventos[self.hovered_idx]
+                
+                # Interacciones exclusivas de AUDIO dentro de la tarjeta
+                if ev_target.get('tipo') == 'audio':
+                    # Clic sobre la barra waveform (seek)
+                    if self.rect_audio_wave and self.rect_audio_wave.contains(pos):
+                        if self.audio_player and self.audio_dur_ms > 0:
+                            pct = (pos.x() - self.rect_audio_wave.x()) / max(1.0, self.rect_audio_wave.width())
+                            pct = max(0.0, min(1.0, pct))
+                            self.audio_player.setPosition(int(pct * self.audio_dur_ms))
+                        else:
+                            self._toggle_audio(ev_target.get('ruta'))
+                        return
+                    # Cualquier otro clic dentro de la tarjeta de audio -> Play / Pause in-app
+                    self._toggle_audio(ev_target.get('ruta'))
                     return
-                elif self.fn_abrir_categoria:
-                    self.fn_abrir_categoria(ev['tipo'], ev['titulo_cat'])
-                    return
-
-        for it in self.items_render:
-            hitbox = it.get('hitbox')
-            if hitbox and hitbox.contains(pos):
-                ev = it['ev']
-                if self.fn_abrir_categoria:
-                    self.fn_abrir_categoria(ev['tipo'], ev['titulo_cat'])
+                
+        # 2. Clic directo sobre el nodo, píldora o mástil de la línea
+        if not ev_target:
+            for it in self.items_render:
+                hitbox = it.get('hitbox')
+                if hitbox and hitbox.contains(pos):
+                    ev_target = it['ev']
+                    break
+                    
+        if ev_target:
+            # Si es AUDIO en el acceso rápido de la línea de tiempo -> reproducir/pausar in-app (NUNCA Windows Media Player)
+            if ev_target.get('tipo') == 'audio':
+                self._toggle_audio(ev_target.get('ruta'))
                 return
+                
+            # Para Visión, Procesos, Teclado -> abrir normalmente la categoría y el visor de pantalla
+            if self.fn_abrir_categoria:
+                self.fn_abrir_categoria(ev_target['tipo'], ev_target['titulo_cat'])
+            if self.fn_abrir_archivo and ev_target.get('ruta') and os.path.exists(ev_target.get('ruta')):
+                self.fn_abrir_archivo(ev_target['ruta'])
+            return
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -353,119 +539,63 @@ class LineaDeTiempoWidget(QWidget):
             'audio': {'color': QColor('#D97706'), 'bg': QColor(254, 243, 199), 'borde': QColor(253, 230, 138), 'label': 'AUDIO'}
         }
         
-        # --- ALGORITMO MEJORADO: SMART BALANCING + TIER ESCALATION ---
-        top_items = []
-        bot_items = []
-        last_top_x = -9999
-        last_bot_x = -9999
-        last_dir = -1
+        # --- ALGORITMO MEJORADO: DISTRIBUCIÓN HORIZONTAL MÍNIMA + ALTERNANCIA 100% RECTA ---
+        todos = []
+        
+        # 1. Asignar posiciones X garantizando separación mínima de mástiles (cero amontonamientos en ráfagas o clusters)
+        MIN_DIST_MASTILES = 52
+        last_x = margen_x - MIN_DIST_MASTILES
+        
+        posiciones_x = []
+        for ev in self.eventos:
+            pct = (ev['time'] - self.t_min) / duracion_total
+            x_ideal = margen_x + int(pct * ancho_linea)
+            x_asignado = max(x_ideal, last_x + MIN_DIST_MASTILES)
+            posiciones_x.append(x_asignado)
+            last_x = x_asignado
+            
+        # Si la última posición sobrepasa el límite útil por la derecha, escalar suavemente
+        max_util = w - margen_x - 30
+        if posiciones_x and posiciones_x[-1] > max_util:
+            scale = (max_util - margen_x) / float(posiciones_x[-1] - margen_x)
+            posiciones_x = [margen_x + int((px - margen_x) * scale) for px in posiciones_x]
+            
+        # 2. Asignar altura de mástil uniforme y alternancia rítmica arriba/abajo
+        # Altura fija de mástil: 44px (muy lejos del título, perfectamente proporcionada)
+        H_MASTIL = 44
         
         for i, ev in enumerate(self.eventos):
-            pct = (ev['time'] - self.t_min) / duracion_total
-            xr = margen_x + int(pct * ancho_linea)
+            x_m = posiciones_x[i]
+            # Alternar estrictamente Arriba (-1) y Abajo (1):
+            # Como la distancia entre eventos consecutivos es >= 52px, la distancia entre
+            # dos eventos consecutivos de ARRIBA es >= 104px (¡más de 40px libres entre cápsulas de texto!).
+            dir_y = -1 if (i % 2 == 0) else 1
+            yt = y_linea + (H_MASTIL * dir_y)
             
-            dist_top = xr - last_top_x
-            dist_bot = xr - last_bot_x
-            
-            UMBRAL = 64
-            if dist_top >= UMBRAL and dist_bot >= UMBRAL:
-                dir_y = -last_dir
-            elif dist_top >= UMBRAL and dist_bot < UMBRAL:
-                dir_y = -1
-            elif dist_bot >= UMBRAL and dist_top < UMBRAL:
-                dir_y = 1
-            else:
-                dir_y = -1 if dist_top >= dist_bot else 1
-                
-            last_dir = dir_y
-            item = {
+            todos.append({
                 'idx': i,
                 'ev': ev,
-                'x_raw': xr,
-                'x_target': xr,
+                'x_raw': x_m,
+                'x_target': x_m,  # 100% PERPENDICULAR Y RECTO A 90°
+                'y_target': yt,
                 'dir': dir_y,
                 'tier': 0
-            }
-            if dir_y == -1:
-                last_top_x = xr
-                top_items.append(item)
-            else:
-                last_bot_x = xr
-                bot_items.append(item)
-                
-        def procesar_lado(items):
-            if not items:
-                return
-            for k in range(len(items) - 1):
-                curr = items[k]
-                sig = items[k + 1]
-                diff = sig['x_target'] - curr['x_target']
-                
-                if diff < 70:
-                    sig['tier'] = (curr['tier'] + 1) % 2
-                    min_req = 56 if sig['tier'] != curr['tier'] else 72
-                    if diff < min_req:
-                        empuje = min_req - diff
-                        sig['x_target'] += empuje
-                        
-        procesar_lado(top_items)
-        procesar_lado(bot_items)
-        
-        todos = top_items + bot_items
-        todos.sort(key=lambda x: x['idx'])
-        
-        # Limitar para que ningún nodo se salga del margen derecho
-        max_x = w - margen_x - 30
-        if todos and todos[-1]['x_target'] > max_x:
-            overflow = todos[-1]['x_target'] - max_x
-            for it in todos:
-                it['x_target'] -= overflow
-                
-        # Asignar coordenadas Y finales con 2 tiers de altura limpia
-        # Tier 0 = 45px, Tier 1 = 88px
-        alturas = {0: 45, 1: 88}
-        for it in todos:
-            h_tier = alturas.get(it['tier'], 45)
-            it['y_target'] = y_linea + (h_tier * it['dir'])
+            })
             
         self.items_render = todos
         
-        # 1. Dibujar Mástiles Perpendiculares (con salida vertical recta a 90°)
+        # 1. Dibujar Mástiles 100% Perpendiculares y Rectos a 90° (sin curvas)
         for it in todos:
             ev = it['ev']
             cfg_key = 'objeto' if ev.get('motivo') == 'OBJETO' else ev['tipo']
             conf = config_tipo.get(cfg_key, config_tipo['webcam'])
             col = conf['color']
             xr = it['x_raw']
-            xt = it['x_target']
             yt = it['y_target']
-            d = it['dir']
             
-            path = QPainterPath()
-            if abs(xt - xr) <= 2:
-                # Mástil 100% vertical
-                path.moveTo(xr, y_linea)
-                path.lineTo(xr, yt)
-            else:
-                # Salida vertical recta (10px), transición suave en S y entrada vertical recta (10px)
-                recta_salida = d * 10
-                recta_llegada = d * 10
-                p_start_rect = y_linea + recta_salida
-                p_end_rect = yt - recta_llegada
-                
-                path.moveTo(xr, y_linea)
-                path.lineTo(xr, p_start_rect)
-                
-                mid_y = (p_start_rect + p_end_rect) / 2.0
-                path.cubicTo(
-                    xr, mid_y,
-                    xt, mid_y,
-                    xt, p_end_rect
-                )
-                path.lineTo(xt, yt)
-                
-            painter.setPen(QPen(col, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
-            painter.drawPath(path)
+            # Línea vertical pura a 90°
+            painter.setPen(QPen(col, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+            painter.drawLine(int(xr), int(y_linea), int(xr), int(yt))
             
             # Ancla sobre el carril central
             painter.setPen(QPen(QColor('#FFFFFF'), 1.8))
@@ -529,15 +659,35 @@ class LineaDeTiempoWidget(QWidget):
             
         # 3. Hover Card flotante interactiva
         self.hovered_card_rect = None
+        self.rect_audio_btn = None
+        self.rect_audio_wave = None
+        
         if self.hovered_idx is not None and 0 <= self.hovered_idx < len(todos):
             item_h = todos[self.hovered_idx]
             ev_h = item_h['ev']
             cfg_h = 'objeto' if ev_h.get('motivo') == 'OBJETO' else ev_h['tipo']
             conf_h = config_tipo.get(cfg_h, config_tipo['webcam'])
             col_h = conf_h['color']
+            es_audio = (ev_h.get('tipo') == 'audio')
             
-            card_w = 236
-            card_h = 70
+            thumb_pixmap = None
+            tiene_thumb = False
+            if not es_audio:
+                thumb_pixmap = self._obtener_thumbnail(ev_h.get('ruta'))
+                tiene_thumb = (thumb_pixmap is not None and not thumb_pixmap.isNull())
+            
+            if es_audio:
+                card_w = 320
+                card_h = 92
+            elif tiene_thumb:
+                card_w = 300
+                card_h = 78
+                thumb_w = 72
+                thumb_h = 54
+            else:
+                card_w = 236
+                card_h = 70
+                
             if item_h['x_target'] + card_w + 30 < w - 20:
                 card_x = item_h['x_target'] + 22
             else:
@@ -548,40 +698,153 @@ class LineaDeTiempoWidget(QWidget):
             rect_card = QRectF(card_x, card_y, card_w, card_h)
             self.hovered_card_rect = rect_card
             
+            # Sombra y marco exterior
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QBrush(QColor(15, 23, 42, 35)))
+            painter.setBrush(QBrush(QColor(15, 23, 42, 45)))
             painter.drawRoundedRect(rect_card.translated(2, 3), 8, 8)
             
             painter.setBrush(QBrush(QColor('#0F172A')))
             painter.setPen(QPen(QColor(col_h.red(), col_h.green(), col_h.blue(), 220), 1.5))
             painter.drawRoundedRect(rect_card, 8, 8)
             
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QBrush(col_h))
-            painter.drawEllipse(QPointF(card_x + 14, card_y + 16), 3.5, 3.5)
-            
-            font_c_title = QFont('Segoe UI', 9, QFont.Weight.Bold)
-            painter.setFont(font_c_title)
-            painter.setPen(QColor('#F8FAFC'))
-            rect_t = QRectF(card_x + 24, card_y + 7, card_w - 32, 17)
-            painter.drawText(rect_t, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, f"{ev_h['titulo_cat']}  •  Alerta IA")
-            
-            font_c_meta = QFont('Segoe UI', 8)
-            painter.setFont(font_c_meta)
-            painter.setPen(QColor('#94A3B8'))
-            fm_m = painter.fontMetrics()
-            hora_h = datetime.datetime.fromtimestamp(ev_h['time']).strftime('%H:%M:%S')
-            arch_nombre = ev_h.get('archivo', 'evidencia')
-            meta_str = f"Hora: {hora_h}   Archivo: {arch_nombre}"
-            meta_elided = fm_m.elidedText(meta_str, Qt.TextElideMode.ElideRight, int(card_w - 28))
-            rect_m = QRectF(card_x + 14, card_y + 27, card_w - 28, 16)
-            painter.drawText(rect_m, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, meta_elided)
-            
-            font_c_cta = QFont('Segoe UI', 8, QFont.Weight.DemiBold)
-            painter.setFont(font_c_cta)
-            painter.setPen(QColor('#38BDF8'))
-            rect_c = QRectF(card_x + 14, card_y + 46, card_w - 28, 16)
-            painter.drawText(rect_c, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, 'Clic para abrir evidencia »')
+            if es_audio:
+                # --- DISEÑO REPRODUCTOR DE AUDIO WHATSAPP (Imagen 3) ---
+                from PyQt6.QtMultimedia import QMediaPlayer
+                esta_reproduciendo = (self.audio_player and 
+                                      self.audio_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState and 
+                                      self.audio_reproduciendo_ruta == ev_h.get('ruta'))
+                
+                # Encabezado
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QBrush(col_h))
+                painter.drawEllipse(QPointF(card_x + 14, card_y + 16), 3.5, 3.5)
+                
+                font_c_title = QFont('Segoe UI', 9, QFont.Weight.Bold)
+                painter.setFont(font_c_title)
+                painter.setPen(QColor('#F8FAFC'))
+                hora_h = datetime.datetime.fromtimestamp(ev_h['time']).strftime('%H:%M:%S')
+                rect_t = QRectF(card_x + 23, card_y + 8, card_w - 35, 17)
+                painter.drawText(rect_t, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, f"Audio  •  Alerta IA  ({hora_h})")
+                
+                # Contenedor del Reproductor
+                rect_player = QRectF(card_x + 10, card_y + 32, card_w - 20, 50)
+                painter.setPen(QPen(QColor('#334155'), 1))
+                painter.setBrush(QBrush(QColor('#1E293B')))
+                painter.drawRoundedRect(rect_player, 6, 6)
+                
+                # Botón circular Play/Pause (30px)
+                btn_d = 30
+                btn_x = card_x + 18
+                btn_y = card_y + 42
+                self.rect_audio_btn = QRectF(btn_x, btn_y, btn_d, btn_d)
+                
+                painter.setPen(Qt.PenStyle.NoPen)
+                if esta_reproduciendo:
+                    painter.setBrush(QBrush(QColor('#0284C7')))
+                else:
+                    painter.setBrush(QBrush(QColor('#D97706')))
+                painter.drawEllipse(self.rect_audio_btn)
+                
+                # Icono dentro del botón Play/Pause
+                bcx = self.rect_audio_btn.center().x()
+                bcy = self.rect_audio_btn.center().y()
+                painter.setBrush(QBrush(QColor('#FFFFFF')))
+                if esta_reproduciendo:
+                    # Pause ❚❚
+                    painter.drawRoundedRect(QRectF(bcx - 4.5, bcy - 5.5, 3, 11), 1, 1)
+                    painter.drawRoundedRect(QRectF(bcx + 1.5, bcy - 5.5, 3, 11), 1, 1)
+                else:
+                    # Play ▶
+                    poly = QPolygonF([
+                        QPointF(bcx - 3, bcy - 6),
+                        QPointF(bcx - 3, bcy + 6),
+                        QPointF(bcx + 6, bcy)
+                    ])
+                    painter.drawPolygon(poly)
+                    
+                # Barras de onda (Waveform)
+                wave_x_start = card_x + 56
+                wave_y_mid = card_y + 57
+                alturas_wave = [4, 8, 14, 10, 6, 16, 20, 18, 12, 19, 22, 18, 14, 20, 16, 10, 17, 21, 14, 8, 12, 16, 10, 6]
+                num_barras = len(alturas_wave)
+                spacing = 7
+                wave_ancho = num_barras * spacing
+                self.rect_audio_wave = QRectF(wave_x_start, card_y + 36, wave_ancho + 10, 42)
+                
+                prog = 0.0
+                if esta_reproduciendo and self.audio_dur_ms > 0:
+                    prog = min(1.0, max(0.0, self.audio_pos_ms / self.audio_dur_ms))
+                    
+                for b_idx, b_h in enumerate(alturas_wave):
+                    bx = wave_x_start + (b_idx * spacing)
+                    b_pct = b_idx / float(num_barras)
+                    if b_pct <= prog and esta_reproduciendo:
+                        painter.setBrush(QBrush(QColor('#38BDF8')))
+                    else:
+                        painter.setBrush(QBrush(QColor('#64748B')))
+                    painter.drawRoundedRect(QRectF(bx, wave_y_mid - (b_h / 2.0), 3, b_h), 1.5, 1.5)
+                    
+                # Scrubber dot azul WhatsApp
+                scrub_x = wave_x_start + (prog * wave_ancho)
+                painter.setBrush(QBrush(QColor('#38BDF8')))
+                painter.drawEllipse(QPointF(scrub_x, wave_y_mid), 4.5, 4.5)
+                painter.setBrush(QBrush(QColor('#FFFFFF')))
+                painter.drawEllipse(QPointF(scrub_x, wave_y_mid), 1.5, 1.5)
+                
+                # Tiempo transcurrido
+                font_time = QFont('Segoe UI', 8, QFont.Weight.Bold)
+                painter.setFont(font_time)
+                painter.setPen(QColor('#CBD5E1'))
+                if esta_reproduciendo and self.audio_dur_ms > 0:
+                    seg_act = int(self.audio_pos_ms / 1000)
+                    tiempo_str = f"{seg_act // 60}:{seg_act % 60:02d}"
+                else:
+                    tiempo_str = "0:00"
+                painter.drawText(QRectF(card_x + 235, card_y + 48, 42, 18), Qt.AlignmentFlag.AlignCenter, tiempo_str)
+                
+            else:
+                # --- DISEÑO CON FOTO O TEXTO PARA VISIÓN, PROCESOS, TECLADO ---
+                offset_x = 14
+                if tiene_thumb:
+                    rect_thumb = QRectF(card_x + 10, card_y + 12, thumb_w, thumb_h)
+                    painter.save()
+                    clip_path = QPainterPath()
+                    clip_path.addRoundedRect(rect_thumb, 5, 5)
+                    painter.setClipPath(clip_path)
+                    painter.drawPixmap(int(rect_thumb.x()), int(rect_thumb.y()), int(thumb_w), int(thumb_h), thumb_pixmap)
+                    painter.restore()
+                    
+                    painter.setPen(QPen(QColor(col_h.red(), col_h.green(), col_h.blue(), 140), 1))
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    painter.drawRoundedRect(rect_thumb, 5, 5)
+                    offset_x = 92
+                
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QBrush(col_h))
+                painter.drawEllipse(QPointF(card_x + offset_x, card_y + 17), 3.5, 3.5)
+                
+                font_c_title = QFont('Segoe UI', 9, QFont.Weight.Bold)
+                painter.setFont(font_c_title)
+                painter.setPen(QColor('#F8FAFC'))
+                rect_t = QRectF(card_x + offset_x + 9, card_y + 8, card_w - offset_x - 16, 17)
+                painter.drawText(rect_t, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, f"{ev_h['titulo_cat']}  •  Alerta IA")
+                
+                font_c_meta = QFont('Segoe UI', 8)
+                painter.setFont(font_c_meta)
+                painter.setPen(QColor('#94A3B8'))
+                fm_m = painter.fontMetrics()
+                hora_h = datetime.datetime.fromtimestamp(ev_h['time']).strftime('%H:%M:%S')
+                arch_nombre = ev_h.get('archivo', 'evidencia')
+                meta_str = f"Hora: {hora_h}  •  {arch_nombre}"
+                meta_elided = fm_m.elidedText(meta_str, Qt.TextElideMode.ElideRight, int(card_w - offset_x - 14))
+                rect_m = QRectF(card_x + offset_x, card_y + 29, card_w - offset_x - 14, 16)
+                painter.drawText(rect_m, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, meta_elided)
+                
+                font_c_cta = QFont('Segoe UI', 8, QFont.Weight.DemiBold)
+                painter.setFont(font_c_cta)
+                painter.setPen(QColor('#38BDF8'))
+                rect_c = QRectF(card_x + offset_x, card_y + 49, card_w - offset_x - 14, 16)
+                painter.drawText(rect_c, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, 'Clic para abrir evidencia »')
 
 
 class PanelCarpetas(QWidget):
@@ -727,19 +990,39 @@ class PanelCarpetas(QWidget):
         self.lbl_timeline_title = QLabel("Línea de Tiempo Analítica")
         self.lbl_timeline_title.setObjectName("pc_lbl_timeline_title")
         self.lbl_timeline_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_timeline_title.setStyleSheet("font-size: 20px; font-weight: bold; margin-bottom: 2px;")
+        self.lbl_timeline_title.setStyleSheet("font-size: 20px; font-weight: bold; margin-bottom: 12px;")
         self.lay_carpetas_main.addWidget(self.lbl_timeline_title)
         
         self.timeline = LineaDeTiempoWidget(self.abrir_categoria, fn_abrir_archivo=self._abrir_archivo)
         
-        # Contenedor limpio para la línea de tiempo sin barras de desplazamiento innecesarias
+        # Contenedor para la línea de tiempo con desplazamiento horizontal dinámico
         self.scroll_timeline = QScrollArea()
         self.scroll_timeline.setWidgetResizable(True)
         self.scroll_timeline.setWidget(self.timeline)
-        self.scroll_timeline.setStyleSheet("QScrollArea { border: none; background: transparent; }")
-        self.scroll_timeline.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_timeline.setStyleSheet("""
+            QScrollArea { border: none; background: transparent; }
+            QScrollBar:horizontal {
+                height: 10px;
+                background: #F1F5F9;
+                border-radius: 5px;
+                margin: 0px 10px 0px 10px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #94A3B8;
+                border-radius: 5px;
+                min-width: 35px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background: #64748B;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+                background: transparent;
+            }
+        """)
+        self.scroll_timeline.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll_timeline.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_timeline.setFixedHeight(310)
+        self.scroll_timeline.setFixedHeight(350)
         
         self.lay_carpetas_main.addWidget(self.scroll_timeline)
         
@@ -1166,10 +1449,10 @@ class PanelCarpetas(QWidget):
             lay_c = QVBoxLayout(frame_card)
             lay_c.setContentsMargins(15, 15, 15, 15)
             
-            num = str(i+1).zfill(2)
-            nombre_corto = f"EV_{nombre_carpeta}_{num}"
-            
-            lbl_info = QLabel(f"<b>{nombre_corto}</b>")
+            nombre_sin_ext = os.path.splitext(archivo)[0]
+            lbl_info = QLabel(f"<b>{nombre_sin_ext}</b>")
+            lbl_info.setWordWrap(True)
+            lbl_info.setToolTip(archivo)
             lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl_info.setObjectName("pc_lbl_info")
             lay_c.addWidget(lbl_info)
@@ -1231,6 +1514,50 @@ class PanelCarpetas(QWidget):
     def abrir_teclado(self): self.abrir_categoria("teclado", "Teclado")
 
 
+    def _localizar_archivo_evidencia(self, subcarpeta, clave_meta, id_alerta, meta_archivos, sufijo_legacy="", hash_esperado=None):
+        if not self.ruta_evidencias_local:
+            return None
+            
+        # 1. Buscar a través de meta_archivos.json (nombres semánticos modernos)
+        if meta_archivos and id_alerta in meta_archivos:
+            rel = meta_archivos[id_alerta].get(clave_meta)
+            if rel:
+                p = os.path.join(self.ruta_evidencias_local, rel)
+                if os.path.exists(p):
+                    return p
+                    
+        # 2. Buscar por convención legacy (evidencia_{id_alerta}...)
+        path_legacy = os.path.join(self.ruta_evidencias_local, subcarpeta, f"evidencia_{id_alerta}{sufijo_legacy}")
+        if os.path.exists(path_legacy):
+            return path_legacy
+            
+        # 3. Fallback: Si no se encuentra por nombre directo pero tenemos hash_esperado, buscar en la carpeta
+        if hash_esperado:
+            dir_cat = os.path.join(self.ruta_evidencias_local, subcarpeta)
+            if os.path.exists(dir_cat):
+                try:
+                    import hashlib
+                    from cryptography.fernet import Fernet
+                    from config.configuracion import AES_SECRET_KEY
+                    f_crypto = Fernet(AES_SECRET_KEY)
+                    for f_nom in os.listdir(dir_cat):
+                        f_full = os.path.join(dir_cat, f_nom)
+                        if os.path.isfile(f_full):
+                            try:
+                                with open(f_full, "rb") as fc:
+                                    b_enc = fc.read()
+                                    try:
+                                        b_dec = f_crypto.decrypt(b_enc)
+                                    except Exception:
+                                        b_dec = b_enc
+                                    if hashlib.sha256(b_dec).hexdigest() == hash_esperado:
+                                        return f_full
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+        return None
+
     def ejecutar_auditoria(self):
         import hashlib
         import os
@@ -1261,6 +1588,16 @@ class PanelCarpetas(QWidget):
         progress.setMinimumDuration(0) # Forzar que se muestre de inmediato
         progress.show()
         
+        meta_json_path = os.path.join(self.ruta_evidencias_local, "meta_archivos.json")
+        meta_archivos = {}
+        if os.path.exists(meta_json_path):
+            try:
+                import json
+                with open(meta_json_path, "r", encoding="utf-8") as f_meta:
+                    meta_archivos = json.load(f_meta)
+            except Exception:
+                meta_archivos = {}
+
         archivos_analizados = 0
         archivos_validos = 0
         archivos_manipulados = []
@@ -1273,8 +1610,8 @@ class PanelCarpetas(QWidget):
             
             # Revisar Webcam
             hash_webcam = al.get('hashWebcam')
-            path_webcam = os.path.join(self.ruta_evidencias_local, "webcam", f"evidencia_{id_alerta}.webp")
-            if hash_webcam and os.path.exists(path_webcam):
+            path_webcam = self._localizar_archivo_evidencia("webcam", "webcam", id_alerta, meta_archivos, sufijo_legacy=".webp", hash_esperado=hash_webcam)
+            if hash_webcam and path_webcam and os.path.exists(path_webcam):
                 archivos_analizados += 1
                 progress.setLabelText(f"Analizando firma Hash de las evidencias {archivos_analizados}/{total_archivos_esperados}...")
                 progress.setValue(archivos_analizados)
@@ -1300,9 +1637,9 @@ class PanelCarpetas(QWidget):
             clase = al.get('claseAlerta', '').upper()
             subc = "proceso" if clase in ["SISTEMA", "PROCESO", "PROCESOS"] else ("teclado" if clase == "TECLADO" else "webcam")
             suf = ".webp" if clase in ["SISTEMA", "PROCESO", "PROCESOS", "TECLADO"] else "_pantalla.webp"
-            path_pantalla = os.path.join(self.ruta_evidencias_local, subc, f"evidencia_{id_alerta}{suf}")
+            path_pantalla = self._localizar_archivo_evidencia(subc, "pantalla", id_alerta, meta_archivos, sufijo_legacy=suf, hash_esperado=hash_pantalla)
             
-            if hash_pantalla and os.path.exists(path_pantalla):
+            if hash_pantalla and path_pantalla and os.path.exists(path_pantalla):
                 archivos_analizados += 1
                 progress.setLabelText(f"Analizando firma Hash de las evidencias {archivos_analizados}/{total_archivos_esperados}...")
                 progress.setValue(archivos_analizados)
@@ -1325,8 +1662,8 @@ class PanelCarpetas(QWidget):
                         
             # Revisar Audio
             hash_audio = al.get('hashAudio')
-            path_audio = os.path.join(self.ruta_evidencias_local, "audio", f"evidencia_{id_alerta}.wav")
-            if hash_audio and os.path.exists(path_audio):
+            path_audio = self._localizar_archivo_evidencia("audio", "audio", id_alerta, meta_archivos, sufijo_legacy=".wav", hash_esperado=hash_audio)
+            if hash_audio and path_audio and os.path.exists(path_audio):
                 archivos_analizados += 1
                 progress.setLabelText(f"Analizando firma Hash de las evidencias {archivos_analizados}/{total_archivos_esperados}...")
                 progress.setValue(archivos_analizados)

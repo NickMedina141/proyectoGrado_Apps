@@ -27,13 +27,20 @@ class DetalleEstudiante(QWidget):
         import time
         self.ultimo_frame_tiempo = time.time()
 
-    def cargar_datos(self, nombre_estudiante, id_sesion):
+    def cargar_datos(self, nombre_estudiante, id_sesion, estudiante_id=None):
         self.sesion_actual_id = id_sesion
+        self.estudiante_id = estudiante_id
+        self.nombre_estudiante = nombre_estudiante
+        self.fraude_marcado_local = False
         self.lbl_nombre_estudiante.setText(nombre_estudiante)
 
-        # Forzar el color explÃ­citamente para que no quede blanco sobre blanco en tema claro
+        # Forzar el color explícitamente para que no quede blanco sobre blanco en tema claro
         self.lbl_nombre_estudiante.setStyleSheet(
             "color: #2c3e50; font-size: 24px; font-weight: bold;")
+        if hasattr(self, 'lbl_subtitulo'):
+            self.lbl_subtitulo.setText("Evaluación en curso")
+            self.lbl_subtitulo.setStyleSheet("color: #7F8C8D; font-size: 14px;")
+
         if hasattr(self, 'timer_alertas') and self.timer_alertas:
             self.timer_alertas.stop()
 
@@ -44,7 +51,7 @@ class DetalleEstudiante(QWidget):
             if widget:
                 widget.deleteLater()
 
-        # --- LÃGICA DE TÃNEL DE VIDEO ON-DEMAND ---
+        # --- LÓGICA DE TÚNEL DE VIDEO ON-DEMAND ---
         from api.cliente_ws import HiloWebSocket
         from PyQt6.QtCore import QTimer
 
@@ -53,12 +60,16 @@ class DetalleEstudiante(QWidget):
             self.detener_stream()
         self.lbl_video_placeholder.setText(
             "Conectando con la cámara del estudiante...\nEsperando frames...")
+        self.lbl_video_placeholder.setStyleSheet(
+            "color: #7F8C8D; font-size: 15px; font-weight: bold;")
 
         # Escuchamos el canal de video
         self.hilo_stream = HiloWebSocket(
             ruta_sala=id_sesion, topico_base="/topic/stream")
 
         # Timer para asegurar que el comando llega al estudiante (reintento robusto)
+        if hasattr(self, 'timer_reintento') and self.timer_reintento:
+            self.timer_reintento.stop()
         self.timer_reintento = QTimer(self)
         self.timer_reintento.setInterval(2000)  # Reintenta cada 2 seg
         self.timer_reintento.timeout.connect(lambda: self.hilo_stream.enviar_comando(f"/topic/comandos/{id_sesion}", {
@@ -66,12 +77,11 @@ class DetalleEstudiante(QWidget):
 
         def al_recibir_frame(base64_str):
             if self.timer_reintento.isActive():
-                self.timer_reintento.stop()  # Ya llegÃ³ el primer frame, cancelamos reintentos
+                self.timer_reintento.stop()  # Ya llegó el primer frame, cancelamos reintentos
             self.actualizar_frame_video(base64_str)
         self.hilo_stream.frame_recibido.connect(al_recibir_frame)
 
         # Una vez conectado, iniciamos el timer de reintentos
-
         def al_conectar_stream():
             self.timer_reintento.start()
             if hasattr(self.main_window, 'mostrar_overlay_reconexion'):
@@ -81,9 +91,10 @@ class DetalleEstudiante(QWidget):
         self.hilo_stream.start()
 
         # -------------------------------------------
-        self.timer_alertas = QTimer(self)
-        self.timer_alertas.setInterval(3000)
-        self.timer_alertas.timeout.connect(self.refrescar_alertas)
+        if not hasattr(self, 'timer_alertas') or not self.timer_alertas:
+            self.timer_alertas = QTimer(self)
+            self.timer_alertas.setInterval(3000)
+            self.timer_alertas.timeout.connect(self.refrescar_alertas)
         self.ultima_cantidad_alertas = -1
 
         # Llamar a la API la primera vez
@@ -121,19 +132,69 @@ class DetalleEstudiante(QWidget):
         # Si el docente ya marco fraude localmente, el refresco no debe revertir el badge
         if getattr(self, 'fraude_marcado_local', False):
             return
+
+        # --- Auto-recuperación y verificación de sesión en segundo plano ---
         exito_sesion, sesion_info = cliente_api.obtener_sesion(
             self.sesion_actual_id)
+
+        # Si la sesión fue eliminada de la base de datos o figura finalizada/anulada,
+        # consultamos si el estudiante inició una nueva sesión activa para auto-migrar sin botones
+        necesita_buscar_reemplazo = (not exito_sesion) or (
+            isinstance(sesion_info, dict) and sesion_info.get("estadoSesion") in ["FINALIZADA", "ANULADA"])
+
+        if necesita_buscar_reemplazo:
+            cod_ex = getattr(getattr(self.main_window, 'vista_sala', None), 'codigo_examen_actual', None)
+            if cod_ex:
+                ex_ses, lista_ses = cliente_api.obtener_sesiones_examen(cod_ex, todas=True)
+                if ex_ses and isinstance(lista_ses, list):
+                    sesion_candidata = None
+                    for s in lista_ses:
+                        sid = s.get("sesionId") or s.get("id")
+                        eid = s.get("estudianteId")
+                        nom = s.get("nombreEstudiante")
+                        coincide = False
+                        if self.estudiante_id and eid and str(eid) == str(self.estudiante_id):
+                            coincide = True
+                        elif self.nombre_estudiante and nom and nom.strip().lower() == self.nombre_estudiante.strip().lower():
+                            coincide = True
+
+                        if coincide and sid != self.sesion_actual_id:
+                            est_s = str(s.get("estadoSesion", "")).upper()
+                            if not exito_sesion:
+                                sesion_candidata = s
+                                if est_s in ["INICIADA", "EN_CURSO", "ACTIVA"]:
+                                    break
+                            elif est_s in ["INICIADA", "EN_CURSO", "ACTIVA"]:
+                                sesion_candidata = s
+                                break
+
+                    if sesion_candidata:
+                        nueva_id = sesion_candidata.get("sesionId") or sesion_candidata.get("id")
+                        nuevo_nom = sesion_candidata.get("nombreEstudiante", self.nombre_estudiante)
+                        nuevo_eid = sesion_candidata.get("estudianteId", self.estudiante_id)
+                        print(f"[AUTO-SYNC] Sesión actualizada ({nueva_id}) encontrada para {nuevo_nom}. Auto-sincronizando vista...")
+                        self.cargar_datos(nuevo_nom, nueva_id, estudiante_id=nuevo_eid)
+                        return
+
         if exito_sesion and isinstance(sesion_info, dict):
-            estado = sesion_info.get("estadoSesion")
+            estado = str(sesion_info.get("estadoSesion", "")).upper()
             if estado in ["FINALIZADA", "ANULADA"]:
                 self.badge_envivo.setText(
                     "FINALIZADO" if estado == "FINALIZADA" else "ANULADO")
                 self.badge_envivo.setStyleSheet(
-                    "background-color: #7F8C8D; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;")
-                texto = "El estudiante finalizó el examen" if estado == "FINALIZADA" else "Examen anulado"
+                    "background-color: #7F8C8D; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;"
+                    if estado == "FINALIZADA" else
+                    "background-color: #C0392B; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;"
+                )
+                if hasattr(self, 'lbl_subtitulo'):
+                    self.lbl_subtitulo.setText(
+                        "Sesión Finalizada" if estado == "FINALIZADA" else "Sesión Anulada por Infracción")
+                    self.lbl_subtitulo.setStyleSheet("color: #7F8C8D; font-size: 14px;")
+
+                texto = "El estudiante finalizó el examen\nTransmisión finalizada" if estado == "FINALIZADA" else "Examen anulado por fraude\nTransmisión finalizada"
                 self.lbl_video_placeholder.setText(texto)
                 self.lbl_video_placeholder.setStyleSheet(
-                    "color: #555555; font-weight: bold; font-size: 16px;")
+                    "color: #7F8C8D; font-weight: bold; font-size: 15px;")
                 if hasattr(self, 'hilo_stream') and self.hilo_stream:
                     self.detener_stream()
                 if hasattr(self, 'timer_reintento') and self.timer_reintento:
@@ -142,7 +203,7 @@ class DetalleEstudiante(QWidget):
                 self.badge_conexion.setStyleSheet(
                     "color: #7F8C8D; font-weight: bold;")
 
-                # UX Fix: Deshabilitar botones si el examen ya terminÃ³
+                # Deshabilitar botones si el examen ya terminó o se anuló
                 self.btn_advertencia.setEnabled(False)
                 self.btn_marcar_fraude.setEnabled(False)
                 self.btn_advertencia.setStyleSheet(
@@ -157,8 +218,11 @@ class DetalleEstudiante(QWidget):
                 self.badge_envivo.setText("EN VIVO")
                 self.badge_envivo.setStyleSheet(
                     "background-color: #E74C3C; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;")
+                if hasattr(self, 'lbl_subtitulo'):
+                    self.lbl_subtitulo.setText("Evaluación en curso")
+                    self.lbl_subtitulo.setStyleSheet("color: #7F8C8D; font-size: 14px;")
 
-                # Rehabilitar botones si el examen estÃ¡ en curso (y no se ha marcado fraude local)
+                # Rehabilitar botones si el examen está en curso (y no se ha marcado fraude local)
                 if not getattr(self, 'fraude_marcado_local', False):
                     self.btn_advertencia.setEnabled(True)
                     self.btn_marcar_fraude.setEnabled(True)
@@ -174,12 +238,39 @@ class DetalleEstudiante(QWidget):
                         'background-color: #27AE60; color: white; border-radius: 0px; font-weight: bold; font-size: 13px;')
                     self.btn_marcar_fraude.setStyleSheet(
                         'background-color: #E74C3C; color: white; border-radius: 0px; font-weight: bold; font-size: 13px;')
+        elif not exito_sesion:
+            # Sesión eliminada o inexistente en backend sin reemplazo disponible
+            self.badge_envivo.setText("OFFLINE")
+            self.badge_envivo.setStyleSheet(
+                "background-color: #7F8C8D; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;")
+            if hasattr(self, 'lbl_subtitulo'):
+                self.lbl_subtitulo.setText("Sesión cerrada / No disponible")
+                self.lbl_subtitulo.setStyleSheet("color: #7F8C8D; font-size: 14px;")
+            self.lbl_video_placeholder.setText(
+                "Sin sesión activa\nEsperando que el estudiante inicie el examen...")
+            self.lbl_video_placeholder.setStyleSheet(
+                "color: #7F8C8D; font-size: 14px;")
+            if hasattr(self, 'hilo_stream') and self.hilo_stream:
+                self.detener_stream()
+            if hasattr(self, 'timer_reintento') and self.timer_reintento:
+                self.timer_reintento.stop()
+            self.badge_conexion.setText("Offline")
+            self.badge_conexion.setStyleSheet("color: #7F8C8D; font-weight: bold;")
+            self.btn_advertencia.setEnabled(False)
+            self.btn_marcar_fraude.setEnabled(False)
+            if hasattr(self, 'btn_microfono'):
+                self.btn_microfono.setEnabled(False)
+
+        # --- Obtención y renderizado del historial de alertas ---
+        from utils.formato_tiempo import formatear_hora_local_12h
+
         exito, alertas = cliente_api.obtener_alertas(self.sesion_actual_id)
         if not exito or not isinstance(alertas, list):
             alertas = []
         total_alertas = len(alertas)
-        if total_alertas == self.ultima_cantidad_alertas:
-            return  # No hay alertas nuevas, no recargar
+        if total_alertas == self.ultima_cantidad_alertas and self.lista_alertas.count() > 0:
+            return  # No hay alertas nuevas y ya están pintadas
+
         self.ultima_cantidad_alertas = total_alertas
 
         # Limpiar historial previo para refrescar limpio
@@ -210,13 +301,13 @@ class DetalleEstudiante(QWidget):
         for al in alertas:
             titulo = al.get("claseAlerta", "Alerta General")
 
-            # Formatear la descripciÃ³n dinÃ¡micamente segÃºn el tipo de alerta
+            # Formatear la descripción dinámicamente según el tipo de alerta
             if titulo in ["VISION", "OBJETO"]:
                 if titulo == "OBJETO":
                     titulo = "OBJETO SOSPECHOSO"
                 obj = al.get("objetoDetectado", "")
                 tipo = al.get("tipoEvidencia", "")
-                descripcion = f"Detectado: {obj} ({tipo})" if obj else "AnomalÃ­a visual detectada."
+                descripcion = f"Detectado: {obj} ({tipo})" if obj else "Anomalía visual detectada."
             elif titulo == "AUDIO":
                 voces = al.get("vocesDetectadas", 1)
                 texto = al.get("transcripcion", "")
@@ -229,13 +320,18 @@ class DetalleEstudiante(QWidget):
                 patron = al.get("patronSospechoso", "")
                 teclas = al.get("combinacionTeclas", "")
                 descripcion = f"Detectado: {teclas}"
+            elif titulo == "SESION_DUPLICADA":
+                proc = al.get("nombreProceso", "")
+                cat = al.get("categoriaProceso", "")
+                descripcion = f"{proc}. {cat}"
             else:
-                descripcion = "Comportamiento detectado por la IA."
-            hora_str = al.get("horaCaptura", "00:00")
-            if "T" in hora_str:
-                hora_str = hora_str.split("T")[1][:5]
-            nivel = al.get("nivelRiesgo", "BAJO")
-            tipo_alerta = "roja" if nivel == "ALTO" else (
+                descripcion = al.get("descripcion", "Comportamiento detectado por la IA.")
+
+            hora_raw = al.get("horaCaptura", al.get("hora", ""))
+            hora_str = formatear_hora_local_12h(hora_raw)
+
+            nivel = str(al.get("nivelRiesgo", "BAJO")).upper()
+            tipo_alerta = "roja" if nivel in ["ALTO", "CRITICO"] else (
                 "naranja" if nivel == "MEDIO" else "verde")
             self.agregar_alerta_historial(
                 titulo, descripcion, hora_str, tipo_alerta)
@@ -318,11 +414,14 @@ class DetalleEstudiante(QWidget):
                 self.fraude_marcado_local = True
                 self.badge_envivo.setText("ANULADO")
                 self.badge_envivo.setStyleSheet(
-                    "background-color: #7F8C8D; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;")
+                    "background-color: #C0392B; color: white; border-radius: 0px; padding: 3px; font-weight: bold; font-size: 11px;")
+                if hasattr(self, 'lbl_subtitulo'):
+                    self.lbl_subtitulo.setText("Sesión Anulada por Infracción")
+                    self.lbl_subtitulo.setStyleSheet("color: #7F8C8D; font-size: 14px;")
                 self.lbl_video_placeholder.clear()
-                self.lbl_video_placeholder.setText("Examen anulado por fraude")
+                self.lbl_video_placeholder.setText("Examen anulado por fraude\nTransmisión finalizada")
                 self.lbl_video_placeholder.setStyleSheet(
-                    "color: #C0392B; font-weight: bold; font-size: 20px;")
+                    "color: #7F8C8D; font-weight: bold; font-size: 15px;")
                 self.detener_stream()
                 if hasattr(self, 'timer_reintento') and self.timer_reintento:
                     self.timer_reintento.stop()

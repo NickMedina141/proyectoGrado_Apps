@@ -4,7 +4,7 @@
 ; Crea venv e instala dependencias en silencio.
 ; =============================================
 #define MyAppName "Supervision UPC"
-#define MyAppVersion "1.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Universidad Popular del Cesar"
 #define MyAppExeName "SupervisionUPC.exe"
 #define SourceDir "."
@@ -51,6 +51,9 @@ Source: "{#SourceDir}\motor_ia\*"; DestDir: "{app}\motor_ia"; Flags: ignoreversi
 Source: "{#SourceDir}\vista\*"; DestDir: "{app}\vista"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceDir}\recursos\*"; DestDir: "{app}\recursos"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceDir}\Lib\insightface_model\*"; DestDir: "{app}\Lib\insightface_model"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Modelos YOLO para detección de objetos (YOLO11s principal y YOLO11m preservado)
+Source: "{#SourceDir}\yolo11s.pt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\yolo11m.pt"; DestDir: "{app}"; Flags: ignoreversion
 ; Instalador de Python 3.12.10 incrustado - se borra despues de instalar
 Source: "..\python-3.12.10-amd64.exe"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
 

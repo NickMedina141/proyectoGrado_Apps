@@ -429,6 +429,10 @@ class ReporteIA(QWidget):
     self.btn_descargar_pdf.setEnabled(False)
     self.btn_descargar_pdf.setText("Generando reportes (IA)...")
     
+    win = self.window()
+    if hasattr(win, 'overlay_carga'):
+      win.overlay_carga.mostrar("Generando dictamen forense con IA...\nAnalizando evidencias y preparando reportes...")
+    
     texto_global = ""
     self.alertas_por_estudiante = {}
     self.mapa_id_corto = {}
@@ -580,12 +584,18 @@ Usa este formato JSON EXACTO:
     t.start()
 
   def mostrar_error_llm(self, mensaje):
+    win = self.window()
+    if hasattr(win, 'overlay_carga'):
+      win.overlay_carga.ocultar()
     from PyQt6.QtWidgets import QMessageBox
     QMessageBox.critical(self, "Error LM Studio", mensaje)
     self.btn_descargar_pdf.setEnabled(True)
     self.btn_descargar_pdf.setText("Analizar con IA y descargar reportes")
 
   def mostrar_resultado_llm(self, datos_json):
+    win = self.window()
+    if hasattr(win, 'overlay_carga'):
+      win.overlay_carga.ocultar()
     from PyQt6.QtWidgets import QMessageBox
     self.btn_descargar_pdf.setEnabled(True)
     self.btn_descargar_pdf.setText("Analizar con IA y descargar reportes")

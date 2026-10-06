@@ -10,6 +10,7 @@ class HiloCamara(QThread):
   senal_error = pyqtSignal(str)
   senal_advertencia = pyqtSignal(int)
   senal_frame_anotado = pyqtSignal(str)
+  senal_camara_obstruida = pyqtSignal(bool, str) # (activa/inactiva, frame_b64)
 
   def __init__(self, url_api_analisis="http://127.0.0.1:8005/analizar_frame"):
     super().__init__()
@@ -20,6 +21,8 @@ class HiloCamara(QThread):
     self.FRAME_SKIP = 6 # (5 FPS) Reduce carga de red y CPU sin perder detalle
     self.procesando_ia = False # Flag de protección
     self.ultimo_frame_ia = None # Cache del último frame dibujado
+    self.frames_consecutivos_oscuridad = 0
+    self.camara_obstruida_activa = False
     
     # --- Variables del Buho (Temporizador de Atencion) ---
     self.tiempo_distraido = 0.0
@@ -48,6 +51,26 @@ class HiloCamara(QThread):
       if not ret:
         time.sleep(0.1)
         continue
+
+      # Detección inmediata de cámara tapada o cubierta física
+      import numpy as np
+      luminancia = float(np.mean(frame))
+      if luminancia < 15.0:
+        self.frames_consecutivos_oscuridad += 1
+      else:
+        self.frames_consecutivos_oscuridad = 0
+
+      # Si lleva más de 12 frames consecutivos oscuros (~1.2 - 1.5s):
+      if self.frames_consecutivos_oscuridad >= 12:
+        if not self.camara_obstruida_activa:
+          self.camara_obstruida_activa = True
+          _, buf_ev = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
+          frame_b64_obs = base64.b64encode(buf_ev).decode('utf-8')
+          self.senal_camara_obstruida.emit(True, frame_b64_obs)
+      else:
+        if self.camara_obstruida_activa:
+          self.camara_obstruida_activa = False
+          self.senal_camara_obstruida.emit(False, "")
 
       frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
       h, w, ch = frame_rgb.shape
@@ -117,7 +140,8 @@ class HiloCamara(QThread):
                             if self.fallos_consecutivos_suplantacion >= self.UMBRAL_CONFIRMACION_SUPLANTACION:
                                 print(f"[ALERTA BIOMETRICA CONFIRMADA] SUPLANTACION_IDENTIDAD tras {self.UMBRAL_CONFIRMACION_SUPLANTACION} verificaciones ({cert*100:.1f}%)")
                                 from api.cliente_respuesta import cliente_api
-                                cliente_api.enviar_evidencia_silenciosa(["SUPLANTACION_IDENTIDAD"], frame_base64=frame_b64)
+                                import threading
+                                threading.Thread(target=cliente_api.enviar_evidencia_silenciosa, args=(["SUPLANTACION_IDENTIDAD"], frame_b64), daemon=True).start()
                                 self.fallos_consecutivos_suplantacion = 0
                                 self.biometria_check_time = time.time()
                             else:
@@ -162,6 +186,10 @@ class HiloCamara(QThread):
 
   def _procesar_resultados_ia(self, resultados, frame_anotado_b64):
     try:
+      # Si la cámara está tapada, ignorar análisis secundario del búho para no generar pitidos incoherentes
+      if getattr(self, 'camara_obstruida_activa', False):
+        return
+
       ahora = time.time()
       dt = ahora - self.tiempo_ultima_revision
       self.tiempo_ultima_revision = ahora
@@ -194,23 +222,29 @@ class HiloCamara(QThread):
       if comportamiento_anomalo:
         self.tiempo_distraido += dt
       else:
-        self.tiempo_distraido -= dt * 1.5 
+        self.tiempo_distraido -= dt * 2.0 
         
-      self.tiempo_distraido = max(0.0, min(15.0, self.tiempo_distraido))
+      # Escala ágil del faro: 6.0 segundos totales (reacción dinámica y sensible en cada tono)
+      self.tiempo_distraido = max(0.0, min(6.0, self.tiempo_distraido))
       
       # 2. Calcular nivel de buho (0 a 5)
-      nivel = int((self.tiempo_distraido / 15.0) * 5)
+      nivel = int((self.tiempo_distraido / 6.0) * 5)
       if hasattr(self, 'senal_advertencia'):
         self.senal_advertencia.emit(nivel)
       
       # 3. Disparar alerta de FALTA DE ATENCION si llega a nivel 5 (Rojo)
       if nivel == 5 and self.nivel_buho_previo < 5:
         from api.cliente_respuesta import cliente_api
-        cliente_api.enviar_evidencia_silenciosa(["DESATENCION_PROLONGADA"], frame_base64=frame_anotado_b64)
+        import threading
+        threading.Thread(
+            target=cliente_api.enviar_evidencia_silenciosa, 
+            args=(["DESATENCION_PROLONGADA"], frame_anotado_b64), 
+            daemon=True
+        ).start()
         
       self.nivel_buho_previo = nivel
       
-      # 4. Procesar unicamente alertas CRITICAS ignorando las menores (que ya procesa el buho)
+      # 4. Procesar únicamente alertas CRÍTICAS ignorando las menores (que ya procesa el buho)
       alertas_confirmadas = resultados.get("alertas", [])
       alertas_criticas = [
           a for a in alertas_confirmadas 
@@ -219,7 +253,12 @@ class HiloCamara(QThread):
       
       if alertas_criticas:
         from api.cliente_respuesta import cliente_api
-        cliente_api.enviar_evidencia_silenciosa(alertas_criticas, frame_base64=frame_anotado_b64)
+        import threading
+        threading.Thread(
+            target=cliente_api.enviar_evidencia_silenciosa, 
+            args=(alertas_criticas, frame_anotado_b64), 
+            daemon=True
+        ).start()
           
     except Exception as e:
       print(f"Error procesando resultados IA: {e}")

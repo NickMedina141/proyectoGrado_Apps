@@ -75,7 +75,10 @@ def analizar_frame(request: FrameRequest):
     nparr = np.frombuffer(base64.b64decode(request.frame_base64), np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    # Ejecutar el análisis de visión (esto dibuja el HUD en 'img')
+    # Preservar snapshot limpio original de la cámara para evidencia forense
+    img_evidencia_limpia = img.copy()
+
+    # Ejecutar el análisis de visión (esto dibuja el HUD/landmarks en 'img' para streaming en vivo)
     resultados = analizador_vision.analizar_frame(img)
     
     # 1. Preview ultra-liviano para streaming continuo al profesor (640x360 cal 55, ~8 KB)
@@ -84,10 +87,11 @@ def analizar_frame(request: FrameRequest):
     frame_anotado_b64 = base64.b64encode(buffer_anotado).decode('utf-8')
     
     # 2. Snapshot de alta definición (1280x720 HD cal 80) para evidencia forense
+    # Se genera usando el frame LIMPIO capturado de la webcam, sin mallas artificiales de MediaPipe
     frame_evidencia_b64 = None
     tiene_alertas = bool(resultados.get("alertas")) or bool(resultados.get("alertas_crudas"))
     if tiene_alertas:
-      _, buffer_hd = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 80])
+      _, buffer_hd = cv2.imencode('.jpg', img_evidencia_limpia, [cv2.IMWRITE_JPEG_QUALITY, 80])
       frame_evidencia_b64 = base64.b64encode(buffer_hd).decode('utf-8')
     
     return {

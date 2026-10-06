@@ -1,0 +1,34 @@
+{
+  "por_nombre": {
+    "andres martinez": "10900002",
+    "martinez andres": "10900002",
+    "laura lopez": "10900003",
+    "lopez laura": "10900003",
+    "jorge garcia": "10900004",
+    "garcia jorge": "10900004",
+    "camila perez": "10900005",
+    "perez camila": "10900005",
+    "luis sanchez": "10900006",
+    "sanchez luis": "10900006",
+    "daniela ramirez": "10900007",
+    "ramirez daniela": "10900007",
+    "diego torres": "10900008",
+    "torres diego": "10900008",
+    "valentina flores": "10900009",
+    "flores valentina": "10900009",
+    "david leonardo sanchez guerra": "10900000",
+    "sanchez guerra david leonardo": "10900000"
+  },
+  "por_id": {},
+  "por_email": {
+    "andres.martinez@unicesar.edu.co": "10900002",
+    "laura.lopez@unicesar.edu.co": "10900003",
+    "jorge.garcia@unicesar.edu.co": "10900004",
+    "camila.perez@unicesar.edu.co": "10900005",
+    "luis.sanchez@unicesar.edu.co": "10900006",
+    "daniela.ramirez@unicesar.edu.co": "10900007",
+    "diego.torres@unicesar.edu.co": "10900008",
+    "valentina.flores@unicesar.edu.co": "10900009",
+    "dleonardosanchez@unicesar.edu.co": "10900000"
+  }
+}

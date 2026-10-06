@@ -8,52 +8,84 @@ import time
 
 class ClienteApi:
   def __init__(self):
-    self.cliente = httpx.Client(timeout=10.0)
+    self.cliente = httpx.Client(timeout=4.0)
     self.buffer_alertas = []
+    self._lock_buffer = threading.Lock()
+    self.conectado = True
     self.hilo_buffer = threading.Thread(
         target=self._procesar_buffer, daemon=True)
     self.hilo_buffer.start()
 
+  def _encolar_alerta(self, sesion_id: str, carga_util: dict):
+    """Encola una evidencia de forma instantánea y segura para enviarla cuando regrese la red."""
+    with self._lock_buffer:
+      # Límite amplio de seguridad: hasta 500 alertas en memoria (~30 min de evidencia continua)
+      if len(self.buffer_alertas) >= 500:
+        self.buffer_alertas.pop(0)
+      self.buffer_alertas.append({
+        "sesion_id": sesion_id,
+        "carga_util": carga_util,
+        "timestamp_local": time.time()
+      })
+      print(f"[API BUFFER] Alerta encolada exitosamente. Total acumulado en buffer: {len(self.buffer_alertas)}")
+
   def _procesar_buffer(self):
+    """Hilo centinela que drena el buffer de evidencias en orden cronológico (FIFO) cuando hay red."""
     while True:
-      time.sleep(5)
-      if self.buffer_alertas:
-        # Intentar enviar la primera alerta
-        alerta = self.buffer_alertas[0]
+      time.sleep(0.5)
+      if not self.buffer_alertas:
+        continue
+
+      while True:
+        alerta = None
+        with self._lock_buffer:
+          if self.buffer_alertas:
+            alerta = self.buffer_alertas[0]
+
+        if not alerta:
+          break
+
         url = f"{url_supervision_base}/{alerta['sesion_id']}/alerta"
         try:
-          # --- CIFRADO E2EE AES-256 PARA BUFFER ---
+          # --- SALVAGUARDA FORENSE Y CIFRADO E2EE AES-256 PARA BUFFER ---
           try:
-                import hashlib
-                from cryptography.fernet import Fernet
-                from config.configuracion import AES_SECRET_KEY
-                f_crypto = Fernet(AES_SECRET_KEY)
-                for campo in ["urlFotoWebcam", "urlCapturaPantalla", "urlAudio"]:
-                    if alerta['carga_util'].get(campo):
-                        datos_str = alerta['carga_util'][campo]
-                        if not datos_str.startswith("gAAAAA"): 
-                            if "," in datos_str:
-                                datos_str = datos_str.split(",")[1]
-                            
-                            # FIRMA FORENSE
-                            firma_hash = hashlib.sha256(datos_str.encode('utf-8')).hexdigest()
-                            if campo == "urlFotoWebcam": alerta['carga_util']["hashWebcam"] = firma_hash
-                            if campo == "urlCapturaPantalla": alerta['carga_util']["hashPantalla"] = firma_hash
-                            if campo == "urlAudio": alerta['carga_util']["hashAudio"] = firma_hash
-                            
-                            cifrado = f_crypto.encrypt(datos_str.encode('utf-8'))
-                            alerta['carga_util'][campo] = cifrado.decode('utf-8')
-          except Exception as e:
-              print(f"[E2EE ERROR BUFFER] {e}")
+            import hashlib
+            from cryptography.fernet import Fernet
+            from config.configuracion import AES_SECRET_KEY
+            f_crypto = Fernet(AES_SECRET_KEY)
+            for campo in ["urlFotoWebcam", "urlCapturaPantalla", "urlAudio"]:
+              if alerta['carga_util'].get(campo):
+                datos_str = alerta['carga_util'][campo]
+                if not datos_str.startswith("gAAAAA"):
+                  if "," in datos_str:
+                    datos_str = datos_str.split(",")[1]
+                  firma_hash = hashlib.sha256(datos_str.encode('utf-8')).hexdigest()
+                  if campo == "urlFotoWebcam" and not alerta['carga_util'].get("hashWebcam"):
+                    alerta['carga_util']["hashWebcam"] = firma_hash
+                  if campo == "urlCapturaPantalla" and not alerta['carga_util'].get("hashPantalla"):
+                    alerta['carga_util']["hashPantalla"] = firma_hash
+                  if campo == "urlAudio" and not alerta['carga_util'].get("hashAudio"):
+                    alerta['carga_util']["hashAudio"] = firma_hash
+                  cifrado = f_crypto.encrypt(datos_str.encode('utf-8'))
+                  alerta['carga_util'][campo] = cifrado.decode('utf-8')
+          except Exception as e_cifrado:
+            print(f"[API BUFFER ERROR] Error en verificación de cifrado E2EE: {e_cifrado}")
 
           res = self._hacer_peticion("post", url, json=alerta['carga_util'])
           if res.status_code == 200:
-            print("[API BUFFER] Alerta encolada enviada con exito.")
-            self.buffer_alertas.pop(0)
+            with self._lock_buffer:
+              if self.buffer_alertas and self.buffer_alertas[0] == alerta:
+                self.buffer_alertas.pop(0)
+            self.conectado = True
+            print(f"[API BUFFER] Alerta enviada con éxito del buffer. Restantes: {len(self.buffer_alertas)}")
+            time.sleep(0.12)  # Pequeño respiro entre envíos para no saturar la red
           else:
-            print(f"[API BUFFER ERROR] HTTP {res.status_code}")
+            time.sleep(2.0)
+            break
         except Exception:
-            pass # No hay conexion aun, esperar al siguiente ciclo
+          self.conectado = False
+          time.sleep(2.5)  # Esperar antes de reintentar si no hay conexión
+          break
  
 
   def _obtener_cabecera_token(self):
@@ -95,6 +127,64 @@ class ClienteApi:
             os.execl(sys.executable, sys.executable, *sys.argv)
     return res
 
+  def _extraer_mensaje_error(self, respuesta, mensaje_fallback="Ocurrió un error inesperado", fallback=None):
+    """
+    Extrae un mensaje de error limpio y comprensible para el usuario,
+    eliminando códigos HTTP, prefijos técnicos, JSON crudo o HTML.
+    """
+    if fallback:
+      mensaje_fallback = fallback
+    if respuesta is None:
+      return mensaje_fallback
+
+    texto = getattr(respuesta, 'text', '')
+    if texto:
+      texto = texto.strip()
+      # 1. Si es HTML (como 502/503 de proxy/Railway), no mostrar etiquetas HTML
+      if texto.startswith("<!DOCTYPE") or texto.startswith("<html") or "<html>" in texto.lower():
+        if getattr(respuesta, 'status_code', None) in (502, 503, 504):
+          return "El servidor institucional no está disponible en este momento. Por favor, intenta de nuevo más tarde."
+        return mensaje_fallback
+
+      # 2. Si es JSON (Spring Boot default error response como {"message": "...", "error": "..."})
+      try:
+        import json
+        datos = json.loads(texto)
+        if isinstance(datos, dict):
+          msg = datos.get("message") or datos.get("mensaje") or datos.get("error") or datos.get("detail")
+          if msg and isinstance(msg, str) and not msg.lower().startswith("internal server error"):
+            texto = msg.strip()
+      except Exception:
+        pass
+
+      # 3. Limpiar comillas exteriores si las hay
+      if texto.startswith('"') and texto.endswith('"') and len(texto) >= 2:
+        texto = texto[1:-1].strip()
+
+      # 4. Remover prefijos técnicos
+      import re
+      texto = re.sub(r'^(Fallo en API\s*(\(HTTP\s*\d+\))?\s*:\s*)', '', texto, flags=re.IGNORECASE)
+      texto = re.sub(r'^(Error\s*(\(HTTP\s*\d+\))?\s*:\s*)', '', texto, flags=re.IGNORECASE)
+      texto = re.sub(r'^(Error\s*\d+\s*:\s*)', '', texto, flags=re.IGNORECASE)
+      texto = re.sub(r'^(HTTP\s*\d+\s*:\s*)', '', texto, flags=re.IGNORECASE)
+
+      if texto:
+        return texto
+
+    status = getattr(respuesta, 'status_code', 0)
+    if status == 400:
+      return "La solicitud contiene parámetros no válidos o incompletos."
+    elif status == 401:
+      return "Credenciales incorrectas o sesión no autorizada."
+    elif status == 403:
+      return "Acceso denegado: No tienes permisos para realizar esta acción o tu límite de intentos fue alcanzado."
+    elif status == 404:
+      return mensaje_fallback if mensaje_fallback != "Ocurrió un error inesperado" else "El recurso o examen solicitado no fue encontrado."
+    elif status in (500, 502, 503, 504):
+      return "El servidor institucional tuvo un inconveniente al procesar la solicitud. Por favor, intenta más tarde."
+
+    return mensaje_fallback
+
   def login_estudiante(self, email: str, password: str):
     carga_util = {
       "email": email,
@@ -107,11 +197,99 @@ class ClienteApi:
         sesion_actual.guardar_sesion_auth(datos.get("token"), email)
         return True, "Inicio de sesión exitoso"
       elif respuesta.status_code == 401:
-        return False, "Credenciales incorrectas"
+        return False, "Credenciales incorrectas. Por favor, verifica tu correo y contraseña."
       else:
-        return False, f"Error del servidor: {respuesta.status_code}"
-    except httpx.RequestError as e:
-      return False, f"Error de conexión con el servidor backend (Spring Boot no responde)."
+        return False, self._extraer_mensaje_error(respuesta, "No se pudo iniciar sesión. Por favor intenta más tarde.")
+    except httpx.RequestError:
+      return False, "No se pudo conectar con el servidor institucional. Por favor, verifica tu conexión a internet."
+
+  def solicitar_codigo_registro(self, email: str, cedula: str, rol: str, nombre: str = ""):
+    from config.configuracion import url_registro_solicitar_codigo
+    carga_util = {
+      "email": email,
+      "cedula": cedula,
+      "rol": rol,
+      "nombre": nombre
+    }
+    try:
+      respuesta = self.cliente.post(url_registro_solicitar_codigo, json=carga_util)
+      if respuesta.status_code == 200:
+        datos = respuesta.json()
+        return True, datos.get("mensaje", "Código de verificación enviado al correo.")
+      else:
+        try:
+          error_data = respuesta.json()
+          mensaje = error_data.get("mensaje", "Error al procesar la solicitud.")
+        except Exception:
+          mensaje = self._extraer_mensaje_error(respuesta, "No se pudo solicitar el código.")
+        return False, mensaje
+    except httpx.RequestError:
+      return False, "No se pudo conectar con el servidor institucional. Verifica tu conexión a internet."
+
+  def confirmar_registro_estudiante(self, email: str, codigo_otp: str, nombre: str, apellidos: str, cedula: str, password: str):
+    from config.configuracion import url_registro_confirmar_estudiante
+    carga_util = {
+      "email": email,
+      "codigoOtp": codigo_otp,
+      "nombre": nombre,
+      "apellidos": apellidos,
+      "cedula": cedula,
+      "password": password
+    }
+    try:
+      respuesta = self.cliente.post(url_registro_confirmar_estudiante, json=carga_util)
+      if respuesta.status_code == 200:
+        datos = respuesta.json()
+        return True, datos.get("mensaje", "Cuenta de estudiante creada con éxito.")
+      else:
+        try:
+          error_data = respuesta.json()
+          mensaje = error_data.get("mensaje", "Error al confirmar el registro.")
+        except Exception:
+          mensaje = self._extraer_mensaje_error(respuesta, "No se pudo completar el registro.")
+        return False, mensaje
+    except httpx.RequestError:
+      return False, "No se pudo conectar con el servidor institucional. Verifica tu conexión a internet."
+
+  def solicitar_codigo_recuperacion(self, email: str):
+    from config.configuracion import url_recuperar_solicitar_codigo
+    carga_util = {"email": email}
+    try:
+      respuesta = self.cliente.post(url_recuperar_solicitar_codigo, json=carga_util)
+      if respuesta.status_code == 200:
+        datos = respuesta.json()
+        return True, datos.get("mensaje", "Código de recuperación enviado al correo institucional.")
+      else:
+        try:
+          error_data = respuesta.json()
+          mensaje = error_data.get("mensaje", "Error al solicitar la recuperación.")
+        except Exception:
+          mensaje = self._extraer_mensaje_error(respuesta, "No se pudo solicitar el código de recuperación.")
+        return False, mensaje
+    except httpx.RequestError:
+      return False, "No se pudo conectar con el servidor institucional. Verifica tu conexión a internet."
+
+  def confirmar_recuperacion_password(self, email: str, codigo_otp: str, nueva_password: str):
+    from config.configuracion import url_recuperar_confirmar
+    carga_util = {
+      "email": email,
+      "codigoOtp": codigo_otp,
+      "nuevaPassword": nueva_password
+    }
+    try:
+      respuesta = self.cliente.post(url_recuperar_confirmar, json=carga_util)
+      if respuesta.status_code == 200:
+        datos = respuesta.json()
+        return True, datos.get("mensaje", "Contraseña restablecida exitosamente.")
+      else:
+        try:
+          error_data = respuesta.json()
+          mensaje = error_data.get("mensaje", "Error al restablecer la contraseña.")
+        except Exception:
+          mensaje = self._extraer_mensaje_error(respuesta, "No se pudo restablecer la contraseña.")
+        return False, mensaje
+    except httpx.RequestError:
+      return False, "No se pudo conectar con el servidor institucional. Verifica tu conexión a internet."
 
   def iniciar_sesion_examen(self, estudiante_id: str, pin_examen: str):
     import platform
@@ -185,6 +363,13 @@ class ClienteApi:
     except Exception as e:
         return False, f"Bloqueo Fatal de Ubicacion: {e}"
 
+    # 3.6. Obtener Huella Digital Unívoca de Dispositivo (Hardware Fingerprint)
+    from utils.huella_dispositivo import obtener_huella_dispositivo
+    info_huella = obtener_huella_dispositivo()
+    device_id = info_huella.get("deviceId")
+    direccion_mac = info_huella.get("direccionMac")
+    sesion_actual.guardar_device_id(device_id)
+
     carga_util = {
       "estudianteId": estudiante_id,
       "pinExamen": pin_examen,
@@ -194,7 +379,9 @@ class ClienteApi:
         "sistemaOperativo": os_info,
         "protocoloConexion": "TCP",
         "latitud": lat,
-        "longitud": lon
+        "longitud": lon,
+        "deviceId": device_id,
+        "direccionMac": direccion_mac
       }
     }
     try:
@@ -205,11 +392,11 @@ class ClienteApi:
         sesion_actual.guardar_sesion_examen(sesion_id)
         return True, datos
       elif res.status_code == 404 or res.status_code == 400:
-        return False, f"Error {res.status_code}: No existe un examen activo con ese PIN o ya no es válido."
+        return False, self._extraer_mensaje_error(res, "No existe un examen activo con ese PIN o ya no es válido.")
       else:
-        return False, f"Fallo en API (HTTP {res.status_code}): {res.text}"
+        return False, self._extraer_mensaje_error(res, "No fue posible acceder a la sesión del examen.")
     except httpx.RequestError:
-      return False, "Error de conexión: Verifica que el servidor (Spring Boot) esté encendido."
+      return False, "No se pudo conectar con el servidor institucional. Por favor, verifica tu conexión a internet."
 
   def finalizar_sesion_examen(self, sesion_id: str):
     url = f"{url_supervision_base}/{sesion_id}/finalizar"
@@ -247,16 +434,24 @@ class ClienteApi:
     except Exception as e:
         print(f"[E2EE ERROR] No se pudo cifrar la evidencia: {e}")
 
+    # Si ya sabemos que estamos desconectados, encolar de inmediato sin demoras
+    if not self.conectado:
+      self._encolar_alerta(sesion_id, carga_util)
+      return False
+
     try:
       res = self._hacer_peticion("post", url, json=carga_util)
       if res.status_code == 200:
         print(f"[API] Alerta enviada con éxito a Spring Boot.")
         return True
       else:
-        print(f"[API ERROR] No se pudo enviar la alerta. HTTP {res.status_code}: {res.text}")
+        print(f"[API ERROR] No se pudo enviar la alerta (HTTP {res.status_code}). Encolando en buffer...")
+        self._encolar_alerta(sesion_id, carga_util)
         return False
     except Exception as e:
-      print(f"[API ERROR] Fallo de red al enviar alerta: {e}")
+      print(f"[API ERROR] Fallo de red al enviar alerta ({e}). Encolando en buffer...")
+      self.conectado = False
+      self._encolar_alerta(sesion_id, carga_util)
       return False
 
   def obtener_reglas_examen(self, sesion_id: str):
@@ -279,24 +474,52 @@ class ClienteApi:
       "MULTIPLE_FACES": "MULTIPLES_ROSTROS",
       "MULTIPLES_ROSTROS": "MULTIPLES_ROSTROS",
       "OBJETO_SOSPECHOSO_MULTIPLES_ROSTROS": "MULTIPLES_ROSTROS",
-      "CELL PHONE": "WEBCAM_OBJETO"
+      "CELL PHONE": "WEBCAM_OBJETO",
+      "CAMARA_OBSTRUIDA": "CAMARA_OBSTRUIDA"
     }
     
     for alerta in alertas:
+      # Soportar tanto diccionarios estructurados como nombres de alertas en texto
+      if isinstance(alerta, dict):
+          clase_alerta = alerta.get("claseAlerta") or alerta.get("clase") or "PROCESO"
+          nivel_riesgo = alerta.get("nivelRiesgo") or "ALTO"
+          detalle = alerta.get("detalle") or alerta.get("tipo_alerta") or "Intento de evasión de interfaz"
+          img_pantalla = alerta.get("evidencia_grafica") or alerta.get("urlCapturaPantalla")
+          carga_util = {
+              "claseAlerta": clase_alerta,
+              "nivelRiesgo": nivel_riesgo,
+              "pidProceso": 0,
+              "nombreProceso": detalle,
+              "categoriaProceso": "CONTROL_REMOTO",
+              "accionTomada": "ADVERTENCIA_MOSTRADA",
+              "urlCapturaPantalla": img_pantalla,
+              "urlFotoWebcam": frame_base64
+          }
+          self.enviar_alerta(sesion_id, carga_util)
+          continue
+
       tipo_evidencia = mapa_evidencias.get(alerta, "WEBCAM_OBJETO")
       
-      # FIX: Clasificar correctamente si es objeto o vision
-      if "MULTIPLES_ROSTROS" in alerta:
+      # FIX: Clasificar correctamente si es objeto, vision o camara obstruida
+      if alerta == "CAMARA_OBSTRUIDA":
+          clase_alerta = "CAMARA_OBSTRUIDA"
+          nivel_riesgo = "CRITICO"
+          desc_objeto = "Cámara física tapada u obstruida"
+      elif "MULTIPLES_ROSTROS" in alerta:
           clase_alerta = "VISION"
+          nivel_riesgo = "ALTO"
+          desc_objeto = alerta
       else:
           clase_alerta = "OBJETO" if alerta.startswith("OBJETO_") else "VISION"
+          nivel_riesgo = "ALTO"
+          desc_objeto = alerta
       
       carga_util = {
         "claseAlerta": clase_alerta,
-        "nivelRiesgo": "ALTO",
+        "nivelRiesgo": nivel_riesgo,
         "tipoEvidenciaVision": tipo_evidencia,
         "cantidadRostros": 0,
-        "objetoDetectado": alerta,
+        "objetoDetectado": desc_objeto,
         "confianzaIa": 0.99,
         "urlFotoWebcam": frame_base64,
         "urlCapturaPantalla": None
@@ -304,6 +527,29 @@ class ClienteApi:
       self.enviar_alerta(sesion_id, carga_util)
       
     return True, "Alertas enviadas"
+
+  def enviar_heartbeat(self, sesion_id: str, device_id: str = None):
+    try:
+      params = {}
+      if device_id:
+        params["deviceId"] = device_id
+      url = f"{url_supervision_base}/{sesion_id}/heartbeat"
+      res = self._hacer_peticion("post", url, params=params)
+      if res.status_code == 200:
+        return True, res.json()
+      elif res.status_code == 403:
+        return False, "DISPOSITIVO_NO_AUTORIZADO"
+      return False, f"HTTP {res.status_code}"
+    except Exception as e:
+      return False, str(e)
+
+  def notificar_interrupcion(self, sesion_id: str, motivo: str = "Cierre inesperado de aplicacion"):
+    try:
+      url = f"{url_supervision_base}/{sesion_id}/interrumpir"
+      res = self._hacer_peticion("post", url, params={"motivo": motivo})
+      return res.status_code == 200
+    except Exception:
+      return False
 
   def solicitar_apelacion(self, sesion_id, argumento_estudiante):
     try:
@@ -313,9 +559,9 @@ class ClienteApi:
       if res.status_code in [200, 201]:
         return True, "Apelación solicitada con éxito."
       else:
-        return False, f"Error {res.status_code}: {res.text}"
-    except Exception as e:
-      return False, f"Error de red: {str(e)}"
+        return False, self._extraer_mensaje_error(res, "No se pudo registrar la solicitud de apelación.")
+    except Exception:
+      return False, "No fue posible comunicarse con el servidor para enviar la apelación. Verifica tu conexión a internet."
 
 cliente_api = ClienteApi()
 
@@ -363,20 +609,22 @@ class HiloStreamEstudiante(QThread):
           on_error=self.al_tener_error,
           on_close=self.al_cerrar
         )
-        print(f"[WS-ESTUDIANTE] Iniciando run_forever()...")
-        self.ws.run_forever()
+        print(f"[WS-ESTUDIANTE] Iniciando run_forever con ping activo...")
+        self.ws.run_forever(ping_interval=4, ping_timeout=3)
         print(f"[WS-ESTUDIANTE] run_forever() finalizó.")
       except Exception as e:
         print(f"[WS-ESTUDIANTE] CRASH FATAL EN EL HILO WS: {e}")
         
       if self.corriendo:
         self.estado_conexion.emit(False) # Avisar que se cayó la red
+        cliente_api.conectado = False
         time.sleep(3) # Esperar antes de reconectar
 
   def al_abrir(self, ws):
     print(f"[WS-ESTUDIANTE] Abriendo túnel STOMP hacia {self.url_conexion}...")
     connect_frame = "CONNECT\naccept-version:1.1,1.2\nhost:localhost\nheart-beat:10000,10000\n\n\x00"
     ws.send(connect_frame)
+    cliente_api.conectado = True
     self.estado_conexion.emit(True)
 
   def al_recibir_mensaje(self, ws, mensaje):
@@ -386,6 +634,8 @@ class HiloStreamEstudiante(QThread):
       topico_comandos = f"/topic/comandos/{self.sesion_id}"
       sub_frame = f"SUBSCRIBE\nid:sub-cmd\ndestination:{topico_comandos}\n\n\x00"
       ws.send(sub_frame)
+      cliente_api.conectado = True
+      self.estado_conexion.emit(True)
       return
 
     if mensaje.startswith("MESSAGE"):
@@ -460,9 +710,13 @@ class HiloStreamEstudiante(QThread):
 
   def al_tener_error(self, ws, error):
     print(f"[WS-ESTUDIANTE] ERROR EN WEBSOCKET: {error}")
+    cliente_api.conectado = False
+    self.estado_conexion.emit(False)
 
   def al_cerrar(self, ws, codigo, mensaje):
     print(f"[WS-ESTUDIANTE] CONEXION CERRADA. Codigo: {codigo}, Msj: {mensaje}")
+    cliente_api.conectado = False
+    self.estado_conexion.emit(False)
 
   def detener(self):
     self.corriendo = False

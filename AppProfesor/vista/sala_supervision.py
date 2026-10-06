@@ -7,6 +7,7 @@ import json
 from PyQt6 import uic
 
 from api.cliente_ws import HiloWebSocket
+from utils.formato_tiempo import formatear_hora_local_12h
 
 
 class SalaSupervision(QWidget):
@@ -504,7 +505,7 @@ class SalaSupervision(QWidget):
         btn_cam.setMinimumHeight(35)
         sesion_id = sesion.get("sesionId") or sesion.get("id") or ""
         btn_cam.clicked.connect(lambda checked, n=nombre,
-                                sid=sesion_id: self.abrir_estudiante(n, sid))
+                                sid=sesion_id, eid=estudiante_id: self.abrir_estudiante(n, sid, eid))
         lay_t.addWidget(btn_cam)
 
         self.layout_grupos.addWidget(tarjeta)
@@ -521,10 +522,10 @@ class SalaSupervision(QWidget):
             "estado": estado_db
         }
 
-    def abrir_estudiante(self, nombre, sesion_id):
+    def abrir_estudiante(self, nombre, sesion_id, estudiante_id=None):
         parent = self.window()
         if hasattr(parent, "abrir_detalle_estudiante"):
-            parent.abrir_detalle_estudiante(nombre, sesion_id)
+            parent.abrir_detalle_estudiante(nombre, sesion_id, estudiante_id)
 
     def iniciar_conexion_en_vivo(self, id_sesion):
         ruta_especifica = f"/{id_sesion}" if id_sesion else ""
@@ -546,38 +547,84 @@ class SalaSupervision(QWidget):
     def mostrar_nueva_alerta(self, datos_alerta):
         if datos_alerta.get("tipoEvento") == "ESTUDIANTE_UNIDO":
             self.cargar_estudiantes(self.codigo_examen_actual)
+            
+            # Auto-sincronizar si el profesor está viendo a este mismo estudiante en la vista de detalle
+            parent = self.window()
+            if hasattr(parent, 'vista_detalle_est') and hasattr(parent, 'contenedor_vistas'):
+                if parent.contenedor_vistas.currentIndex() == 3:  # Vista 3 es detalle estudiante
+                    vista_det = parent.vista_detalle_est
+                    est_id_evento = datos_alerta.get("estudianteId")
+                    nueva_ses_id = datos_alerta.get("sesionId")
+                    if est_id_evento and nueva_ses_id and getattr(vista_det, 'estudiante_id', None) == est_id_evento:
+                        print(f"[AUTO-SYNC] Estudiante {est_id_evento} activo con nueva sesión {nueva_ses_id}. Auto-actualizando vista detalle...")
+                        vista_det.cargar_datos(vista_det.lbl_nombre_estudiante.text(), nueva_ses_id, est_id_evento)
             return
+
+        if datos_alerta.get("tipoEvento") == "SESION_DUPLICADA_BLOQUEADA":
+            mac = datos_alerta.get("macIntruso", "Desconocida")
+            ip = datos_alerta.get("ipIntruso", "Desconocida")
+            datos_alerta["claseAlerta"] = "SESION_DUPLICADA"
+            datos_alerta["nivelRiesgo"] = "CRITICO"
+            datos_alerta["nombreProceso"] = f"Intento en segundo equipo (MAC: {mac})"
+            datos_alerta["categoriaProceso"] = f"IP: {ip}"
+            datos_alerta["objetoDetectado"] = f"Intento de acceso simultáneo bloqueado"
 
         # Cuando entra por websocket
         datos_alerta["nueva_alerta_ws"] = True
         
         # BYPASS E2EE: Guardar la evidencia localmente!
         import os
+        import json
         cod_ex = str(self.codigo_examen_actual or "general")
         base_dir = os.path.join(os.path.expanduser("~"), "Documents", "DataSupervision", "Examenes", cod_ex, datos_alerta.get("nombreEstudiante", "Desconocido").replace(" ", "_"), datos_alerta.get("sesionId", "unknown"))
         for cat in ['audio', 'proceso', 'webcam', 'teclado']:
             os.makedirs(os.path.join(base_dir, cat), exist_ok=True)
             
-        def guardar_b64(b64, subcarpeta, sufijo):
+        from utils.formato_evidencia import generar_nombre_evidencia
+
+        meta_json_path = os.path.join(base_dir, "meta_archivos.json")
+        meta_archivos = {}
+        if os.path.exists(meta_json_path):
+            try:
+                with open(meta_json_path, "r", encoding="utf-8") as f_meta:
+                    meta_archivos = json.load(f_meta)
+            except Exception:
+                meta_archivos = {}
+
+        id_alerta = str(datos_alerta.get("idAlerta", ""))
+        if id_alerta and id_alerta not in meta_archivos:
+            meta_archivos[id_alerta] = {}
+
+        def guardar_b64(b64, subcarpeta, clave_meta="", sufijo_extra="", ext_archivo=".webp"):
             if b64:
                 import base64
                 if "," in b64: b64 = b64.split(",")[1]
-                path = os.path.join(base_dir, subcarpeta, f"evidencia_{datos_alerta.get('idAlerta', 'ws')}{sufijo}")
+                nombre_archivo = generar_nombre_evidencia(base_dir, subcarpeta, datos_alerta, sufijo_extra=sufijo_extra, ext_archivo=ext_archivo)
+                path = os.path.join(base_dir, subcarpeta, nombre_archivo)
                 with open(path, "wb") as f_out:
                     if b64.startswith("gAAAAA"): f_out.write(b64.encode('utf-8'))
                     else: f_out.write(base64.b64decode(b64))
+                if id_alerta and clave_meta:
+                    meta_archivos[id_alerta][clave_meta] = os.path.join(subcarpeta, nombre_archivo).replace("\\", "/")
 
-        guardar_b64(datos_alerta.get("base64WebcamTransient"), "webcam", ".webp")
+        guardar_b64(datos_alerta.get("base64WebcamTransient"), "webcam", clave_meta="webcam", sufijo_extra="", ext_archivo=".webp")
         
         clase = datos_alerta.get("claseAlerta", "").upper()
         if clase in ["SISTEMA", "PROCESO", "PROCESOS"]:
-            guardar_b64(datos_alerta.get("base64PantallaTransient"), "proceso", ".webp")
+            guardar_b64(datos_alerta.get("base64PantallaTransient"), "proceso", clave_meta="pantalla", sufijo_extra="", ext_archivo=".webp")
         elif clase == "TECLADO":
-            guardar_b64(datos_alerta.get("base64PantallaTransient"), "teclado", ".webp")
+            guardar_b64(datos_alerta.get("base64PantallaTransient"), "teclado", clave_meta="pantalla", sufijo_extra="", ext_archivo=".webp")
         else:
-            guardar_b64(datos_alerta.get("base64PantallaTransient"), "webcam", "_pantalla.webp")
+            guardar_b64(datos_alerta.get("base64PantallaTransient"), "webcam", clave_meta="pantalla", sufijo_extra="_pantalla", ext_archivo=".webp")
             
-        guardar_b64(datos_alerta.get("base64AudioTransient"), "audio", ".wav")
+        guardar_b64(datos_alerta.get("base64AudioTransient"), "audio", clave_meta="audio", sufijo_extra="", ext_archivo=".wav")
+        
+        if id_alerta:
+            try:
+                with open(meta_json_path, "w", encoding="utf-8") as f_meta:
+                    json.dump(meta_archivos, f_meta, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"[SalaSupervision] Error guardando meta_archivos.json: {e}")
         
         self.agregar_tarjeta_alerta(datos_alerta)
 
@@ -614,10 +661,8 @@ class SalaSupervision(QWidget):
         layout.setSpacing(6)
         layout.setContentsMargins(12, 10, 12, 12)
 
-        # Hora de captura
-        hora_str = alerta.get("horaCaptura", alerta.get("hora", ""))
-        if "T" in hora_str:
-            hora_str = hora_str.split("T")[1][:5]
+        # Hora de captura en formato local 12H (AM/PM)
+        hora_str = formatear_hora_local_12h(alerta.get("horaCaptura", alerta.get("hora", "")))
 
         nivel_riesgo = alerta.get("nivelRiesgo", "MEDIO").upper()
 
@@ -629,7 +674,7 @@ class SalaSupervision(QWidget):
             clase_alerta += " [Finalizado]"
         else:
             color_riesgo = "#2c3e50"
-            if nivel_riesgo == "ALTO":
+            if nivel_riesgo in ["ALTO", "CRITICO"]:
                 color_riesgo = "#c0392b"
             elif nivel_riesgo == "MEDIO":
                 color_riesgo = "#d35400"

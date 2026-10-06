@@ -7,6 +7,7 @@ class GestorSesion:
       cls.__instancia.token = None
       cls.__instancia.estudiante_id = None
       cls.__instancia.sesion_id = None
+      cls.__instancia.device_id = None
     return cls.__instancia
 
   def guardar_sesion_auth(self, token: str, estudiante_id: str):
@@ -15,6 +16,12 @@ class GestorSesion:
 
   def guardar_sesion_examen(self, sesion_id: str):
     self.sesion_id = sesion_id
+
+  def guardar_device_id(self, device_id: str):
+    self.device_id = device_id
+
+  def obtener_device_id(self) -> str:
+    return self.device_id
 
   def guardar_token(self, token: str):
     self.token = token

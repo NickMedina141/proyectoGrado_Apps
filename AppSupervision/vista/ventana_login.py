@@ -13,14 +13,31 @@ class VentanaLogin(QWidget):
         ruta_ui = os.path.join(os.path.dirname(__file__), "ventana_login.xml")
         loadUi(ruta_ui, self)
         
+        # Identidad visual e ícono de la ventana
+        self.setWindowTitle("UPC SecureExam - Iniciar Sesión")
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        ruta_ico = os.path.join(base_dir, "recursos", "installer_icon.ico")
+        ruta_png = os.path.join(os.path.dirname(__file__), "recursos", "logo_upc.png")
+        ruta_icono = ruta_ico if os.path.exists(ruta_ico) else ruta_png
+        if os.path.exists(ruta_icono):
+            self.setWindowIcon(QIcon(ruta_icono))
+
         logo_path = os.path.join(os.path.dirname(__file__), "recursos", "logo_upc.png").replace("\\", "/")
         if os.path.exists(logo_path):
             self.etiqueta_logo.setText("")
             self.etiqueta_logo.setStyleSheet(f"border-image: url('{logo_path}'); border-radius: 30px;")
         
-        # Conectar botones
+        # Conectar botones y atajos de teclado (Enter)
         self.boton_ingresar.clicked.connect(self.procesar_login)
         self.boton_ojo.clicked.connect(self.alternar_visibilidad_clave)
+        self.entrada_correo.returnPressed.connect(self.entrada_clave.setFocus)
+        self.entrada_clave.returnPressed.connect(self.procesar_login)
+        if hasattr(self, 'boton_politica_datos'):
+            self.boton_politica_datos.clicked.connect(self._abrir_politica_datos)
+        if hasattr(self, 'boton_registro_estudiante'):
+            self.boton_registro_estudiante.clicked.connect(self._abrir_registro_estudiante)
+        if hasattr(self, 'boton_olvido_clave'):
+            self.boton_olvido_clave.clicked.connect(self._abrir_recuperar_clave)
         
         # Rutas de los íconos (Nivel de carpeta anterior + recursos)
         self.ruta_ojo_abierto = os.path.join(os.path.dirname(os.path.dirname(__file__)), "recursos", "ojo_abierto.svg")
@@ -30,6 +47,37 @@ class VentanaLogin(QWidget):
         # boton_ojo sizing defined in ventana_login.xml
         self.boton_ojo.setText("") # Quitar cualquier texto residual
         self.boton_ojo.setIcon(QIcon(self.ruta_ojo_cerrado))
+        
+        # Overlay Spinner para transiciones y operaciones de red
+        from vista.overlay_carga import OverlayCarga
+        self.overlay_carga = OverlayCarga(self)
+        
+    def _abrir_politica_datos(self):
+        from vista.modal_politica_datos import ModalPoliticaDatos
+        modal = ModalPoliticaDatos(self)
+        modal.exec()
+
+    def _abrir_registro_estudiante(self):
+        from vista.modal_registro_estudiante import ModalRegistroEstudiante
+        modal = ModalRegistroEstudiante(self)
+        modal.registro_completado.connect(self._al_completar_registro_estudiante)
+        modal.exec()
+
+    def _al_completar_registro_estudiante(self, email_registrado):
+        self.entrada_correo.setText(email_registrado)
+        self.entrada_clave.clear()
+        self.entrada_clave.setFocus()
+
+    def _abrir_recuperar_clave(self):
+        from vista.modal_recuperar_clave import ModalRecuperarClave
+        modal = ModalRecuperarClave(self)
+        modal.recuperacion_completada.connect(self._al_completar_recuperacion_clave)
+        modal.exec()
+
+    def _al_completar_recuperacion_clave(self, email_restablecido):
+        self.entrada_correo.setText(email_restablecido)
+        self.entrada_clave.clear()
+        self.entrada_clave.setFocus()
         
     def alternar_visibilidad_clave(self):
         if self.entrada_clave.echoMode() == QLineEdit.EchoMode.Password:
@@ -46,70 +94,64 @@ class VentanaLogin(QWidget):
         if not correo or not clave:
             QMessageBox.warning(self, "Campos Incompletos", "Por favor ingresa tu correo y contraseña.")
             return
+
+        if hasattr(self, 'check_politica_login') and not self.check_politica_login.isChecked():
+            QMessageBox.warning(
+                self,
+                "Consentimiento Requerido",
+                "Para iniciar sesión es obligatorio leer y aceptar la Política de Tratamiento de Datos Personales y Biométricos en cumplimiento de la Ley 1581 de 2012."
+            )
+            return
             
         self.boton_ingresar.setEnabled(False)
-        self.boton_ingresar.setText("Validando...")
-        
-        # Llama a la API (bloqueante en este paso simple)
-        exito, mensaje = cliente_api.login_estudiante(correo, clave)
-        
-        if exito:
-            # --- INSIGHTFACE ENROLLMENT ---
-            from motor_ia.biometria_facial import biometria_motor
-            import cv2
-            import json
+        self.boton_ingresar.setText("Iniciando sesión...")
+
+        def _tarea_login():
+            return cliente_api.login_estudiante(correo, clave)
+
+        def _al_terminar_login(res):
+            exito, mensaje = res
+            self.boton_ingresar.setEnabled(True)
+            self.boton_ingresar.setText("Iniciar Sesión")
             
-            import sys
-            if getattr(sys, 'frozen', False):
-                base_dir = os.path.dirname(sys.executable)
-            else:
-                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            ruta_datos = os.path.join(base_dir, "datos_biometricos")
-            os.makedirs(ruta_datos, exist_ok=True)
-            # Limpiamos el correo para usarlo de nombre de archivo
-            correo_limpio = correo.replace("@", "_").replace(".", "_")
-            ruta_emb = os.path.join(ruta_datos, f"emb_{correo_limpio}.json")
-            
-            if not os.path.exists(ruta_emb):
-                QMessageBox.information(self, "Biometria Facial", "Es tu primera vez. Por favor, mira fijamente a la camara en un lugar iluminado para registrar tu Rostro Base.")
-                cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-                import time
-                start_time = time.time()
-                emb = None
-                frame_final = None
+            if exito:
+                from motor_ia.biometria_facial import biometria_motor
+                import cv2
+                import json
                 
-                # Intentar detectar el rostro continuamente hasta por 10 segundos
-                while time.time() - start_time < 10.0:
-                    exito_cap, frame = cap.read()
-                    if exito_cap:
-                        emb = biometria_motor.obtener_embedding(frame, exigir_frontal=True)
-                        if emb is not None:
-                            frame_final = frame
-                            break
-                    
-                    # Pequeña pausa para que la cámara ajuste el brillo y el usuario se posicione
-                    time.sleep(0.1)
-                
-                cap.release()
-                
-                if emb is not None and frame_final is not None:
-                    with open(ruta_emb, 'w') as f:
-                        json.dump(emb.tolist(), f)
-                    cv2.imwrite(os.path.join(ruta_datos, f"rostro_{correo_limpio}.jpg"), frame_final)
-                    QMessageBox.information(self, "Biometria", "Rostro registrado con exito. Ahora ingresaras al panel.")
+                import sys
+                if getattr(sys, 'frozen', False):
+                    base_dir = os.path.dirname(sys.executable)
                 else:
-                    QMessageBox.warning(self, "Error Biometrico", "No se detecto tu rostro claramente. Intenta iniciar sesion nuevamente asegurando buena iluminacion.")
-                    self.boton_ingresar.setEnabled(True)
-                    self.boton_ingresar.setText("Iniciar Sesion")
-                    return
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                ruta_datos = os.path.join(base_dir, "datos_biometricos")
+                os.makedirs(ruta_datos, exist_ok=True)
+                correo_limpio = correo.replace("@", "_").replace(".", "_")
+                ruta_emb = os.path.join(ruta_datos, f"emb_{correo_limpio}.json")
+                
+                if not os.path.exists(ruta_emb):
+                    from vista.modal_registro_biometrico import ModalRegistroBiometrico
+                    modal = ModalRegistroBiometrico(correo_estudiante=correo, parent=self)
+                    resultado = modal.exec()
+                    
+                    if resultado != ModalRegistroBiometrico.DialogCode.Accepted:
+                        QMessageBox.warning(
+                            self, 
+                            "Registro Requerido", 
+                            "El registro facial es obligatorio para poder ingresar a la plataforma de supervisión."
+                        )
+                        return
 
-            # Guardar la ruta globalmente para que hilo_camara la lea
-            biometria_motor.ruta_emb_actual = ruta_emb
+                # Guardar la ruta globalmente para que hilo_camara la lea
+                biometria_motor.ruta_emb_actual = ruta_emb
 
-            if self.app_principal:
-                self.app_principal.mostrar_ventana_principal()
-        else:
-            QMessageBox.critical(self, "Error de Inicio", mensaje)
-            
-        self.boton_ingresar.setEnabled(True)
-        self.boton_ingresar.setText("Iniciar Sesión")
+                if self.app_principal:
+                    self.app_principal.mostrar_ventana_principal()
+            else:
+                QMessageBox.critical(self, "Error de Inicio", mensaje)
+
+        self.overlay_carga.ejecutar_tarea(
+            _tarea_login,
+            _al_terminar_login,
+            mensaje="Iniciando sesión..."
+        )

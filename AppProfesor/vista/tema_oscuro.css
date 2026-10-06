@@ -534,3 +534,372 @@ QComboBox#combo_intentos QAbstractItemView {
     border: 1px solid #334155;
     outline: none;
 }
+
+/* ==================================================================== */
+/* PANEL SUPERADMIN - GESTIÓN DE PERSONAL (TEMA OSCURO)                 */
+/* ==================================================================== */
+QWidget#PanelAdmin,
+QWidget#ReporteInstitucional,
+QScrollArea#area_scroll_reporte,
+QScrollArea#area_scroll_reporte > QWidget,
+QWidget#contenedor_reporte_interior {
+    background-color: #0F172A;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+QLabel#titulo_admin {
+    color: #F8FAFC;
+    font-size: 20px;
+    font-weight: 600;
+}
+QLabel#subtitulo_admin {
+    color: #94A3B8;
+    font-size: 12px;
+}
+QLabel#aviso_admin {
+    color: #10B981;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Franja de métricas */
+QFrame#franja_admin {
+    background-color: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 4px;
+}
+QFrame#divisor_admin {
+    background-color: #334155;
+    border: none;
+}
+QLabel#metrica_etiqueta {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#metrica_valor {
+    color: #F8FAFC;
+    font-size: 26px;
+    font-weight: 600;
+}
+QLabel#metrica_detalle {
+    color: #94A3B8;
+    font-size: 12px;
+}
+
+/* Pestañas de administración */
+QTabWidget#tabs_admin::pane {
+    border: none;
+    background: transparent;
+}
+QTabWidget#tabs_admin QTabBar {
+    background: transparent;
+}
+QTabWidget#tabs_admin QTabBar::tab {
+    background: transparent;
+    color: #94A3B8;
+    padding: 10px 22px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 600;
+    margin-right: 6px;
+}
+QTabWidget#tabs_admin QTabBar::tab:selected {
+    color: #10B981;
+    border-bottom: 2px solid #10B981;
+}
+QTabWidget#tabs_admin QTabBar::tab:hover:!selected {
+    color: #F8FAFC;
+}
+
+/* Zona contenedora de tabla */
+QFrame#zona_tabla_admin {
+    background-color: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 4px;
+}
+QLineEdit#buscador_admin {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    padding: 7px 10px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+QLineEdit#buscador_admin:focus {
+    border: 1px solid #10B981;
+}
+QComboBox#filtro_estado_admin {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    padding: 6px 10px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+QComboBox#filtro_estado_admin:focus {
+    border: 1px solid #10B981;
+}
+QComboBox#filtro_estado_admin::drop-down {
+    border: none;
+    width: 22px;
+}
+QComboBox#filtro_estado_admin QAbstractItemView {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    selection-background-color: #334155;
+    selection-color: #10B981;
+    outline: none;
+}
+QLabel#conteo_admin {
+    color: #94A3B8;
+    font-size: 12px;
+}
+QLabel#vacio_admin {
+    color: #94A3B8;
+    font-size: 13px;
+}
+
+/* Tabla de usuarios */
+QTableWidget#tabla_admin_usuarios {
+    background-color: #1E293B;
+    alternate-background-color: #18233A;
+    color: #F8FAFC;
+    border: none;
+    outline: none;
+    selection-background-color: #334155;
+    selection-color: #10B981;
+    font-size: 13px;
+}
+QTableWidget#tabla_admin_usuarios::item {
+    color: #F8FAFC;
+    padding: 0 14px;
+    border-bottom: 1px solid #243247;
+}
+QTableWidget#tabla_admin_usuarios::item:selected {
+    background-color: #334155;
+    color: #10B981;
+}
+QTableWidget#tabla_admin_usuarios QHeaderView {
+    background-color: #18233A;
+    border: none;
+}
+QTableWidget#tabla_admin_usuarios QHeaderView::section {
+    background-color: #18233A;
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 9px 14px;
+    border: none;
+    border-bottom: 1px solid #334155;
+}
+QTableWidget#tabla_admin_usuarios QWidget#tabla_header_corner {
+    background-color: #18233A;
+    border-bottom: 1px solid #334155;
+}
+
+/* Barra de desplazamiento integrada y transparente */
+QTableWidget#tabla_admin_usuarios QScrollBar:vertical {
+    background: transparent;
+    width: 7px;
+    margin: 0px 2px 0px 0px;
+    border: none;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar::handle:vertical {
+    background: #475569;
+    min-height: 28px;
+    border-radius: 3px;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar::handle:vertical:hover {
+    background: #64748B;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar::add-line:vertical,
+QTableWidget#tabla_admin_usuarios QScrollBar::sub-line:vertical {
+    height: 0px;
+    background: none;
+    border: none;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar::add-page:vertical,
+QTableWidget#tabla_admin_usuarios QScrollBar::sub-page:vertical {
+    background: none;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar:horizontal {
+    background: transparent;
+    height: 7px;
+    margin: 0px;
+    border: none;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar::handle:horizontal {
+    background: #475569;
+    min-width: 28px;
+    border-radius: 3px;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar::add-line:horizontal,
+QTableWidget#tabla_admin_usuarios QScrollBar::sub-line:horizontal {
+    width: 0px;
+    background: none;
+}
+QTableWidget#tabla_admin_usuarios QScrollBar::add-page:horizontal,
+QTableWidget#tabla_admin_usuarios QScrollBar::sub-page:horizontal {
+    background: none;
+}
+
+/* Botón de Gestión en filas y menú contextual */
+QToolButton#gestionar {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    padding: 0px;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 12px;
+}
+QToolButton#gestionar:hover {
+    background-color: #334155;
+    border-color: #475569;
+}
+QToolButton#gestionar::menu-indicator {
+    image: none;
+    width: 0px;
+}
+QMenu#menu_gestion_admin {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    padding: 4px;
+}
+QMenu#menu_gestion_admin::item {
+    padding: 7px 24px 7px 12px;
+    font-size: 13px;
+}
+QMenu#menu_gestion_admin::item:selected {
+    background-color: #334155;
+    color: #10B981;
+}
+QMenu#menu_gestion_admin::item:disabled {
+    color: #64748B;
+}
+QMenu#menu_gestion_admin::separator {
+    height: 1px;
+    background-color: #334155;
+    margin: 4px 8px;
+}
+
+/* Botones principales del módulo admin */
+QPushButton#btn_admin_nuevo {
+    background-color: #059669;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 3px;
+    padding: 7px 16px;
+    font-weight: 600;
+    font-size: 13px;
+}
+QPushButton#btn_admin_nuevo:hover {
+    background-color: #047857;
+}
+QPushButton#btn_admin_nuevo:disabled {
+    background-color: #334155;
+    color: #94A3B8;
+}
+
+QPushButton#btn_admin_secundario {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    border-radius: 3px;
+    padding: 7px 16px;
+    font-weight: 600;
+    font-size: 13px;
+}
+QPushButton#btn_admin_secundario:hover {
+    background-color: #334155;
+}
+
+QPushButton#btn_admin_peligro {
+    background-color: #DC2626;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 3px;
+    padding: 7px 16px;
+    font-weight: 600;
+    font-size: 13px;
+}
+QPushButton#btn_admin_peligro:hover {
+    background-color: #B91C1C;
+}
+QPushButton#btn_admin_peligro:disabled {
+    background-color: #334155;
+    color: #94A3B8;
+}
+
+/* Diálogos modales de SuperADMIN */
+QDialog#DialogoFicha,
+QDialog#DialogoUsuario,
+QDialog#DialogoClaveTemporal,
+QDialog#DialogoEliminar {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+QLabel#dlg_titulo {
+    color: #F8FAFC;
+    font-size: 18px;
+    font-weight: 700;
+}
+QLabel#dlg_subtitulo {
+    color: #94A3B8;
+    font-size: 12px;
+}
+QLabel#dlg_campo {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel#dlg_valor {
+    color: #F8FAFC;
+    font-size: 13px;
+}
+QLabel#dlg_clave {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: #10B981;
+}
+QLabel#dlg_error {
+    color: #F87171;
+    font-size: 12px;
+}
+QLineEdit#dlg_input {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    padding: 7px 10px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+QLineEdit#dlg_input:focus {
+    border: 1px solid #10B981;
+}
+QLineEdit#dlg_input:read-only {
+    background-color: #18233A;
+    color: #94A3B8;
+}
+QComboBox#dlg_combo {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    padding: 7px 10px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+QComboBox#dlg_combo:focus {
+    border: 1px solid #10B981;
+}
+QComboBox#dlg_combo QAbstractItemView {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    selection-background-color: #334155;
+    selection-color: #10B981;
+}

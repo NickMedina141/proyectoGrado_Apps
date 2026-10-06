@@ -15,19 +15,27 @@ if len(sys.argv) > 1 and sys.argv[1] == '--run-api':
 # Validación estricta de Sistema Operativo Soportado (Solo Windows)
 import platform
 if platform.system().lower() != "windows":
-    print("FATAL: AppSupervision ha sido diseñada y certificada exclusivamente para entornos Windows.")
+    print("FATAL: UPC SecureExam ha sido diseñada y certificada exclusivamente para entornos Windows.")
     try:
         from PyQt6.QtWidgets import QApplication, QMessageBox
         _temp_app = QApplication(sys.argv)
         QMessageBox.critical(
             None,
             "Sistema No Compatible",
-            "Acceso denegado: AppSupervision ha sido diseñada y certificada exclusivamente para sistemas operativos Windows.\n\n"
+            "Acceso denegado: UPC SecureExam ha sido diseñada y certificada exclusivamente para sistemas operativos Windows.\n\n"
             "Por motivos de seguridad e integridad, no es posible ejecutar el entorno de supervisión en este sistema operativo."
         )
     except Exception:
         pass
     sys.exit(1)
+
+# Registrar AppUserModelID en Windows para icono propio en barra de tareas
+if sys.platform == "win32":
+    import ctypes
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("UPC.SecureExam.Estudiante.1.0")
+    except Exception:
+        pass
 
 # Asegurar que los imports relativos funcionen correctamente
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -45,18 +53,63 @@ except ImportError:
   pass
 
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QShortcut, QKeySequence, QIcon
 from vista.ventana_login import VentanaLogin
 from vista.ventana_principal import VentanaPrincipal
-
-from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.QtWidgets import QWidget
 
 import subprocess
 import atexit
 
+def aplicar_icono_institucional_windows(widget, ruta_ico):
+  """
+  Inyecta el icono nativo tanto en PyQt6 como a través de la API de Windows (WM_SETICON),
+  garantizando que el Administrador de Tareas y la barra de tareas muestren el escudo de la UPC.
+  """
+  if not widget or not ruta_ico or not os.path.exists(ruta_ico):
+    return
+  try:
+    from PyQt6.QtGui import QIcon
+    widget.setWindowIcon(QIcon(ruta_ico))
+  except Exception:
+    pass
+
+  if sys.platform == "win32":
+    try:
+      import ctypes
+      hwnd = int(widget.winId())
+      if hwnd:
+        WM_SETICON = 0x0080
+        ICON_SMALL = 0
+        ICON_BIG = 1
+        IMAGE_ICON = 1
+        LR_LOADFROMFILE = 0x00000010
+        LR_DEFAULTSIZE = 0x00000040
+        abs_ico = os.path.abspath(ruta_ico)
+        
+        h_icon_big = ctypes.windll.user32.LoadImageW(0, abs_ico, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+        h_icon_small = ctypes.windll.user32.LoadImageW(0, abs_ico, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+        
+        if h_icon_big:
+          ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, h_icon_big)
+        if h_icon_small:
+          ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, h_icon_small)
+    except Exception as e:
+      print(f"[ICONO] Error inyectando WM_SETICON: {e}")
+
 class AppEstudiante:
   def __init__(self):
     self.app = QApplication(sys.argv)
+    self.app.setApplicationName("UPC SecureExam")
+    self.app.setApplicationDisplayName("UPC SecureExam")
+
+    # Configuración de ícono institucional UPC
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    ruta_ico = os.path.join(base_dir, "recursos", "installer_icon.ico")
+    ruta_png = os.path.join(base_dir, "vista", "recursos", "logo_upc.png")
+    self.ruta_icono = ruta_ico if os.path.exists(ruta_ico) else ruta_png
+    if os.path.exists(self.ruta_icono):
+      self.app.setWindowIcon(QIcon(self.ruta_icono))
     
     # Iniciar FastAPI Automáticamente en segundo plano
     self.proceso_ia = self._iniciar_fastapi()
@@ -102,10 +155,16 @@ class AppEstudiante:
     
   def mostrar_ventana_login(self):
     self.ventana_principal.hide()
+    if hasattr(self.ventana_principal, 'hilo_audio_test') and self.ventana_principal.hilo_audio_test:
+      self.ventana_principal.hilo_audio_test.detener()
+      self.ventana_principal.hilo_audio_test = None
     # Asegurar que se limpia la UI al volver a login
     self.ventana_login.entrada_correo.clear()
     self.ventana_login.entrada_clave.clear()
+    if hasattr(self.ventana_login, 'check_politica_login'):
+      self.ventana_login.check_politica_login.setChecked(False)
     self.ventana_login.show()
+    aplicar_icono_institucional_windows(self.ventana_login, self.ruta_icono)
     
   def mostrar_ventana_principal(self):
     self.ventana_login.hide()
@@ -113,6 +172,9 @@ class AppEstudiante:
     self.ventana_principal.stack_vistas.setCurrentIndex(0)
     self.ventana_principal.entrada_pin.clear()
     self.ventana_principal.show()
+    aplicar_icono_institucional_windows(self.ventana_principal, self.ruta_icono)
+    if hasattr(self.ventana_principal, '_ejecutar_diagnostico_hardware'):
+      self.ventana_principal._ejecutar_diagnostico_hardware()
     
   def iniciar(self):
     # Eliminado el salto temporal. Ahora inicia en Login para obtener el Token.

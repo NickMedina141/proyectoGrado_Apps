@@ -132,6 +132,7 @@ class DetectorRostro:
 
     puntos_lista = resultado_mp.face_landmarks[0]
     lm = puntos_lista # acceso rapido a los 468 puntos
+    frame_limpio_evidencia = frame.copy()
 
     # Dibujar contorno facial liviano
     # Dummy drawing struct to bridge tasks API with drawing_utils
@@ -146,13 +147,13 @@ class DetectorRostro:
     # --- Inclinacion de cabeza ---
     inclinacion = self._calcular_inclinacion(lm, ancho, alto)
     datos["inclinacion"] = inclinacion
-    self._verificar_inclinacion(inclinacion, datos, frame)
+    self._verificar_inclinacion(inclinacion, datos, frame_limpio_evidencia)
 
     # --- Direccion de la mirada ---
     mirada_x, mirada_y = self._calcular_mirada(lm)
     datos["mirada_x"] = mirada_x
     datos["mirada_y"] = mirada_y
-    self._verificar_mirada(mirada_x, datos, frame)
+    self._verificar_mirada(mirada_x, datos, frame_limpio_evidencia)
 
     # --- HUD en pantalla ---
     self._dibujar_hud(frame, datos)

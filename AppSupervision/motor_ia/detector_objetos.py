@@ -3,7 +3,7 @@ import time
 from ultralytics import YOLO
 
 class DetectorObjetos:
-  def __init__(self, funcion_alerta=None, frames_entre_analisis=5):
+  def __init__(self, funcion_alerta=None, frames_entre_analisis=1):
     import sys
     import os
     if getattr(sys, 'frozen', False):
@@ -127,19 +127,25 @@ class DetectorObjetos:
       if activo and not self.episodio_activo.get(nombre, False):
         if self.primer_visto.get(nombre) is not None:
           tiempo_acumulado = ahora - self.primer_visto[nombre]
-          min_requerido = getattr(self, "min_tiempo_sostenido", self.UMBRAL_TIEMPO * 0.70)
-          if tiempo_acumulado >= min_requerido:
-            muestras = self.historial_objetos[nombre]
-            positivos = sum(1 for _, d in muestras if d)
-            porcentaje = positivos / len(muestras) if muestras else 0
+          muestras = self.historial_objetos[nombre]
+          positivos = sum(1 for _, d in muestras if d)
 
-            if porcentaje >= 0.50:
-              alerta = f"OBJETO_SOSPECHOSO_{nombre.upper()}"
-              datos["alertas"].append(alerta)
-              if self.funcion_alerta:
-                self.funcion_alerta(alerta, porcentaje, frame.copy())
-              self.episodio_activo[nombre] = True
-              self.ultimo_reporte[nombre] = ahora
+          # Vía rápida para teléfono celular: 2 frames positivos en >= 0.35s disparan la alerta
+          if nombre == "celular":
+            debe_disparar = (tiempo_acumulado >= 0.35 and positivos >= 2)
+            porcentaje = 1.0
+          else:
+            min_requerido = getattr(self, "min_tiempo_sostenido", self.UMBRAL_TIEMPO * 0.70)
+            porcentaje = positivos / len(muestras) if muestras else 0
+            debe_disparar = (tiempo_acumulado >= min_requerido and porcentaje >= 0.50)
+
+          if debe_disparar:
+            alerta = f"OBJETO_SOSPECHOSO_{nombre.upper()}"
+            datos["alertas"].append(alerta)
+            if self.funcion_alerta:
+              self.funcion_alerta(alerta, porcentaje, frame.copy())
+            self.episodio_activo[nombre] = True
+            self.ultimo_reporte[nombre] = ahora
 
   def _ejecutar_deteccion(self, frame):
     alto_analisis = 640

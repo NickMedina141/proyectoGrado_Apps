@@ -1,6 +1,7 @@
 # vista/ventana_principal.py
 import os
 from PyQt6.QtWidgets import QWidget, QMessageBox
+from PyQt6.QtGui import QIcon
 from PyQt6 import uic
 from utils.gestor_sesion import sesion_actual
 
@@ -11,6 +12,8 @@ from vista.reporte_ia import ReporteIA
 from vista.crear_examen import CrearExamen
 from vista.configuracion_examen import ConfiguracionExamen
 from vista.panel_carpetas import PanelCarpetas
+from vista.panel_admin import PanelAdmin
+from vista.reporte_institucional import ReporteInstitucional
 
 class VentanaPrincipal(QWidget):
   def __init__(self):
@@ -19,6 +22,33 @@ class VentanaPrincipal(QWidget):
     # Cargamos el archivo unificado usando ruta absoluta dinámica
     base_path = os.path.dirname(__file__)
     uic.loadUi(os.path.join(base_path, "ventana_principal.xml"), self)
+    
+    # Identidad visual e ícono de la ventana
+    self.setWindowTitle("UPC Proctor - Portal Docente")
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ruta_ico = os.path.join(base_dir, "recursos", "installer_icon.ico")
+    ruta_png = os.path.join(base_path, "recursos", "logo_upc.png")
+    ruta_icono = ruta_ico if os.path.exists(ruta_ico) else ruta_png
+    if os.path.exists(ruta_icono):
+        self.setWindowIcon(QIcon(ruta_icono))
+        import sys
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                hwnd = int(self.winId())
+                if hwnd and ruta_ico and os.path.exists(ruta_ico):
+                    WM_SETICON = 0x0080
+                    IMAGE_ICON = 1
+                    LR_LOADFROMFILE = 0x00000010
+                    abs_ico = os.path.abspath(ruta_ico)
+                    h_icon_big = ctypes.windll.user32.LoadImageW(0, abs_ico, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+                    h_icon_small = ctypes.windll.user32.LoadImageW(0, abs_ico, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+                    if h_icon_big:
+                        ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 1, h_icon_big)
+                    if h_icon_small:
+                        ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 0, h_icon_small)
+            except Exception:
+                pass
     
     logo_path = os.path.join(base_path, "recursos", "logo_upc.png").replace("\\", "/")
     if os.path.exists(logo_path):
@@ -61,12 +91,14 @@ class VentanaPrincipal(QWidget):
     
     self.vista_carpetas = PanelCarpetas(self.volver_al_reporte)
     self.contenedor_vistas.addWidget(self.vista_carpetas) # indice 7
-    
-    # Conectamos Navbar (Actualizado con Reportes)
-    self.btn_nav_dashboard.clicked.connect(lambda: self.cambiar_vista(0))
-    self.btn_nav_reportes.clicked.connect(lambda: self.cambiar_vista(4))
-    self.btn_nav_sala.clicked.connect(lambda: self.cambiar_vista(1))
-    self.btn_nav_apelaciones.clicked.connect(lambda: self.cambiar_vista(2))
+
+    self.vista_admin = PanelAdmin()
+    self.contenedor_vistas.addWidget(self.vista_admin) # indice 8
+    self.indice_admin = self.contenedor_vistas.indexOf(self.vista_admin)
+
+    self.vista_reporte_admin = ReporteInstitucional()
+    self.contenedor_vistas.addWidget(self.vista_reporte_admin) # indice 9
+    self.indice_reporte_admin = self.contenedor_vistas.indexOf(self.vista_reporte_admin)
     
     self.btn_nav_ayuda.clicked.connect(self.mostrar_ayuda)
     self.btn_nav_salir.clicked.connect(self.cerrar_sesion)
@@ -82,7 +114,12 @@ class VentanaPrincipal(QWidget):
     
     self.modo_oscuro = False
     
-    self.cambiar_vista(0) # Inicializar en Dashboard
+    # OVERLAY SPINNER GLOBAL
+    from vista.overlay_carga import OverlayCarga
+    self.overlay_carga = OverlayCarga(self)
+    
+    # Segregación de interfaz y vistas según el rol autenticado
+    self.configurar_segregacion_roles()
     self.aplicar_tema_claro()
     
     # FIX GEOMETRÍA WINDOWS: Evitar que el ScrollArea o cualquier widget fuerce un tamaño mínimo que colapse al maximizar
@@ -109,8 +146,80 @@ class VentanaPrincipal(QWidget):
     lbl_aviso.setStyleSheet("color: white; font-size: 26px; font-weight: bold; background-color: transparent;")
     lbl_aviso.setAlignment(Qt.AlignmentFlag.AlignCenter)
     lay_overlay.addWidget(lbl_aviso)
-      
-    self.cargar_mis_examenes()
+
+  def configurar_segregacion_roles(self):
+    es_adm = sesion_actual.es_admin()
+
+    if es_adm:
+        self.setWindowTitle("UPC Proctor - Portal Administrativo (SuperADMIN)")
+        # Ocultar botones exclusivos del rol docente
+        self.btn_nav_dashboard.setVisible(False)
+        self.btn_nav_sala.setVisible(False)
+        self.btn_nav_apelaciones.setVisible(False)
+        if hasattr(self, 'boton_crear_examen'):
+            self.boton_crear_examen.setVisible(False)
+
+        # Configurar botones exclusivos de administración
+        if hasattr(self, 'btn_nav_admin'):
+            self.btn_nav_admin.setText("Gestión de Usuarios")
+            self.btn_nav_admin.setVisible(True)
+            try:
+                self.btn_nav_admin.clicked.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self.btn_nav_admin.clicked.connect(lambda: self.cambiar_vista(self.indice_admin))
+
+        self.btn_nav_reportes.setText("Reportes Institucionales")
+        self.btn_nav_reportes.setVisible(True)
+        try:
+            self.btn_nav_reportes.clicked.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+        self.btn_nav_reportes.clicked.connect(lambda: self.cambiar_vista(self.indice_reporte_admin))
+
+        # La vista inicial para SuperADMIN es el Panel de Administración
+        self.cambiar_vista(self.indice_admin)
+
+    else:
+        self.setWindowTitle("UPC Proctor - Portal Docente")
+        # Mostrar botones correspondientes a docentes
+        self.btn_nav_dashboard.setVisible(True)
+        self.btn_nav_sala.setVisible(True)
+        self.btn_nav_apelaciones.setVisible(True)
+        if hasattr(self, 'boton_crear_examen'):
+            self.boton_crear_examen.setVisible(True)
+
+        self.btn_nav_reportes.setText("Reportes")
+        self.btn_nav_reportes.setVisible(True)
+        try:
+            self.btn_nav_reportes.clicked.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+        self.btn_nav_reportes.clicked.connect(lambda: self.cambiar_vista(4))
+
+        if hasattr(self, 'btn_nav_admin'):
+            self.btn_nav_admin.setVisible(False)
+
+        try:
+            self.btn_nav_dashboard.clicked.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+        self.btn_nav_dashboard.clicked.connect(lambda: self.cambiar_vista(0))
+
+        try:
+            self.btn_nav_sala.clicked.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+        self.btn_nav_sala.clicked.connect(lambda: self.cambiar_vista(1))
+
+        try:
+            self.btn_nav_apelaciones.clicked.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+        self.btn_nav_apelaciones.clicked.connect(lambda: self.cambiar_vista(2))
+
+        # La vista inicial para Docentes es el Dashboard de Exámenes
+        self.cambiar_vista(0)
 
   def mostrar_overlay_reconexion(self, mostrar):
     if not hasattr(self, 'overlay_desconexion'): return
@@ -122,6 +231,9 @@ class VentanaPrincipal(QWidget):
         self.overlay_desconexion.hide()
 
   def cargar_mis_examenes(self):
+    if sesion_actual.es_admin():
+      return
+
     from api.cliente_respuesta import cliente_api
     from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
     from PyQt6.QtCore import Qt
@@ -452,26 +564,41 @@ class VentanaPrincipal(QWidget):
             except Exception as e:
                 print("Error validando fecha_fin:", e)
                 
-    if estado_actual == "ACTIVO":
-      exito, mensaje = cliente_api.cerrar_examen(id_sesion)
-      if not exito:
-          QMessageBox.warning(self, "Error", mensaje)
-      else:
-          if hasattr(self, 'vista_sala') and getattr(self.vista_sala, 'codigo_examen_actual', None) == id_sesion:
-              self.vista_sala.estado_vacio(True)
-              self.vista_sala.codigo_examen_actual = None
-    else:
-      exito, mensaje = cliente_api.abrir_examen(id_sesion)
-      if not exito: QMessageBox.warning(self, "Error", mensaje)
-    
-    # Recargar dashboard para ver el cambio
-    self.cargar_mis_examenes()
+    if hasattr(self, 'overlay_carga') and self.isVisible():
+        self.overlay_carga.mostrar("Actualizando estado del examen...")
+    try:
+        if estado_actual == "ACTIVO":
+          exito, mensaje = cliente_api.cerrar_examen(id_sesion)
+          if not exito:
+              QMessageBox.warning(self, "Error", mensaje)
+          else:
+              if hasattr(self, 'vista_sala') and getattr(self.vista_sala, 'codigo_examen_actual', None) == id_sesion:
+                  self.vista_sala.estado_vacio(True)
+                  self.vista_sala.codigo_examen_actual = None
+        else:
+          exito, mensaje = cliente_api.abrir_examen(id_sesion)
+          if not exito: QMessageBox.warning(self, "Error", mensaje)
+        
+        # Recargar dashboard para ver el cambio
+        self.cargar_mis_examenes()
+    finally:
+        if hasattr(self, 'overlay_carga'):
+            self.overlay_carga.ocultar()
 
-  def abrir_detalle_estudiante(self, nombre, id_sesion):
-    self.vista_detalle_est.cargar_datos(nombre, id_sesion)
-    self.cambiar_vista(3)
+  def abrir_detalle_estudiante(self, nombre, id_sesion, estudiante_id=None):
+    if hasattr(self, 'overlay_carga') and self.isVisible():
+        self.overlay_carga.mostrar("Cargando detalles del estudiante...")
+    try:
+        self.vista_detalle_est.cargar_datos(nombre, id_sesion, estudiante_id=estudiante_id)
+        self.cambiar_vista(3)
+    finally:
+        if hasattr(self, 'overlay_carga'):
+            self.overlay_carga.ocultar()
     
   def abrir_carpetas_forenses(self, nombre, id_sesion):
+    if hasattr(self, 'overlay_carga') and self.isVisible():
+        self.overlay_carga.mostrar("Cargando evidencias forenses...")
+    try:
         self.vista_origen = self.contenedor_vistas.currentIndex()
         
         if self.vista_origen == 2:
@@ -483,14 +610,23 @@ class VentanaPrincipal(QWidget):
             
         self.vista_carpetas.cargar_datos(nombre, id_sesion)
         self.cambiar_vista(7)
+    finally:
+        if hasattr(self, 'overlay_carga'):
+            self.overlay_carga.ocultar()
     
   def volver_al_reporte(self):
       origen = getattr(self, 'vista_origen', 4)
       self.cambiar_vista(origen)
 
   def entrar_supervisar_dinamico(self, id_sesion, materia):
-    self.vista_sala.cargar_estudiantes(id_sesion, materia)
-    self.cambiar_vista(1)
+    if hasattr(self, 'overlay_carga') and self.isVisible():
+        self.overlay_carga.mostrar("Conectando a sala de supervisión...")
+    try:
+        self.vista_sala.cargar_estudiantes(id_sesion, materia)
+        self.cambiar_vista(1)
+    finally:
+        if hasattr(self, 'overlay_carga'):
+            self.overlay_carga.ocultar()
 
   def abrir_configuracion_examen(self, examen):
     from PyQt6.QtWidgets import QDialog, QMessageBox, QWidget, QVBoxLayout, QStackedWidget, QScrollArea
@@ -730,11 +866,38 @@ class VentanaPrincipal(QWidget):
     self.contenedor_vistas.setCurrentIndex(indice)
     self.actualizar_estilos_sidebar(indice)
     
-    # Cargas dinámicas
-    if indice == 2:
-      self.vista_apelaciones.cargar_apelaciones_reales()
-    if indice == 4:
-      self.vista_reporte.cargar_examenes()
+    # Cargas dinámicas con overlay spinner institucional
+    if indice == 0:
+      if not sesion_actual.es_admin():
+        if hasattr(self, 'overlay_carga') and self.isVisible():
+          self.overlay_carga.mostrar("Actualizando dashboard...")
+        try:
+          self.cargar_mis_examenes()
+        finally:
+          if hasattr(self, 'overlay_carga'):
+            self.overlay_carga.ocultar()
+    elif indice == 2:
+      if hasattr(self, 'overlay_carga') and self.isVisible():
+        self.overlay_carga.mostrar("Cargando solicitudes de apelación...")
+      try:
+        self.vista_apelaciones.cargar_apelaciones_reales()
+      finally:
+        if hasattr(self, 'overlay_carga'):
+          self.overlay_carga.ocultar()
+    elif indice == 4:
+      if hasattr(self, 'overlay_carga') and self.isVisible():
+        self.overlay_carga.mostrar("Cargando reportes y exámenes...")
+      try:
+        self.vista_reporte.cargar_examenes()
+      finally:
+        if hasattr(self, 'overlay_carga'):
+          self.overlay_carga.ocultar()
+    elif indice == getattr(self, 'indice_admin', 8):
+      if hasattr(self, 'vista_admin'):
+        self.vista_admin.cargar_datos()
+    elif indice == getattr(self, 'indice_reporte_admin', -1):
+      if hasattr(self, 'vista_reporte_admin'):
+        self.vista_reporte_admin.cargar_datos()
 
   def actualizar_estilos_sidebar(self, indice_activo):
     estilo_inactivo = """
@@ -745,9 +908,12 @@ class VentanaPrincipal(QWidget):
       QPushButton { background-color: #C1F032; border: none; text-align: left; font-weight: bold; font-size: 14px; padding-left: 15px; color: #003B13; border-radius: 6px; } 
     """
     self.btn_nav_dashboard.setStyleSheet(estilo_activo if indice_activo == 0 else estilo_inactivo)
-    self.btn_nav_reportes.setStyleSheet(estilo_activo if indice_activo == 4 else estilo_inactivo)
+    es_reporte_activo = (indice_activo == 4) or (indice_activo == getattr(self, 'indice_reporte_admin', -1))
+    self.btn_nav_reportes.setStyleSheet(estilo_activo if es_reporte_activo else estilo_inactivo)
     self.btn_nav_sala.setStyleSheet(estilo_activo if indice_activo == 1 else estilo_inactivo)
     self.btn_nav_apelaciones.setStyleSheet(estilo_activo if indice_activo == 2 else estilo_inactivo)
+    if hasattr(self, 'btn_nav_admin'):
+      self.btn_nav_admin.setStyleSheet(estilo_activo if indice_activo == getattr(self, 'indice_admin', 8) else estilo_inactivo)
     self.btn_nav_ayuda.setStyleSheet(estilo_inactivo)
     self.btn_nav_tema.setStyleSheet(estilo_inactivo)
     self.btn_nav_salir.setStyleSheet(estilo_inactivo)
@@ -787,8 +953,16 @@ class VentanaPrincipal(QWidget):
         self.vista_reporte.setStyleSheet(estilo)
         if hasattr(self, "vista_carpetas"):
             self.vista_carpetas.setStyleSheet(estilo)
+        if hasattr(self, "vista_admin"):
+            self.vista_admin.setStyleSheet(estilo)
+        if hasattr(self, "vista_reporte_admin"):
+            self.vista_reporte_admin.setStyleSheet(estilo)
     except Exception as e:
       print(f"Error cargando CSS Claro: {e}")
+    if hasattr(self, "vista_admin"):
+        self.vista_admin.aplicar_tema(False)
+    if hasattr(self, "vista_reporte_admin"):
+        self.vista_reporte_admin.aplicar_tema(False)
     self.actualizar_estilos_sidebar(self.contenedor_vistas.currentIndex())
 
   def aplicar_tema_oscuro(self):
@@ -804,8 +978,16 @@ class VentanaPrincipal(QWidget):
         self.vista_reporte.setStyleSheet(estilo)
         if hasattr(self, "vista_carpetas"):
             self.vista_carpetas.setStyleSheet(estilo)
+        if hasattr(self, "vista_admin"):
+            self.vista_admin.setStyleSheet(estilo)
+        if hasattr(self, "vista_reporte_admin"):
+            self.vista_reporte_admin.setStyleSheet(estilo)
     except Exception as e:
       print(f"Error cargando CSS Oscuro: {e}")
+    if hasattr(self, "vista_admin"):
+        self.vista_admin.aplicar_tema(True)
+    if hasattr(self, "vista_reporte_admin"):
+        self.vista_reporte_admin.aplicar_tema(True)
     self.actualizar_estilos_sidebar(self.contenedor_vistas.currentIndex())
 
   def cerrar_sesion(self):

@@ -7,24 +7,24 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>700</height>
+    <height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>App Estudiante - Login</string>
+   <string>UPC SecureExam - Iniciar Sesión</string>
   </property>
   <layout class="QVBoxLayout" name="layout_global">
    <property name="alignment"><set>Qt::AlignCenter</set></property>
    <item>
     <widget class="QFrame" name="tarjeta_login">
-     <property name="minimumSize"><size><width>420</width><height>550</height></size></property>
-     <property name="maximumSize"><size><width>420</width><height>550</height></size></property>
+     <property name="minimumSize"><size><width>420</width><height>590</height></size></property>
+     <property name="maximumSize"><size><width>420</width><height>590</height></size></property>
      <layout class="QVBoxLayout" name="layout_tarjeta">
       <property name="leftMargin"><number>40</number></property>
-      <property name="topMargin"><number>40</number></property>
+      <property name="topMargin"><number>35</number></property>
       <property name="rightMargin"><number>40</number></property>
-      <property name="bottomMargin"><number>40</number></property>
-      <property name="spacing"><number>15</number></property>
+      <property name="bottomMargin"><number>35</number></property>
+      <property name="spacing"><number>14</number></property>
       
       <!-- LOGO CIRCULAR -->
       <item>
@@ -46,7 +46,7 @@
       <item>
        <widget class="QLabel" name="etiqueta_titulo">
         <property name="font"><font><family>Segoe UI</family><pointsize>22</pointsize><bold>true</bold></font></property>
-        <property name="text"><string>App Estudiante</string></property>
+        <property name="text"><string>UPC SecureExam</string></property>
         <property name="alignment"><set>Qt::AlignCenter</set></property>
        </widget>
       </item>
@@ -63,7 +63,7 @@
       <item>
        <spacer name="spacer_medio">
         <property name="orientation"><enum>Qt::Vertical</enum></property>
-        <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+        <property name="sizeHint" stdset="0"><size><width>20</width><height>10</height></size></property>
        </spacer>
       </item>
       
@@ -79,7 +79,7 @@
         </item>
         <item>
          <widget class="QFrame" name="frame_input_correo">
-          <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+          <property name="minimumSize"><size><width>0</width><height>42</height></size></property>
           <layout class="QHBoxLayout">
            <property name="margin"><number>0</number></property>
            <property name="spacing"><number>5</number></property>
@@ -90,7 +90,7 @@
            </item>
            <item>
             <widget class="QLineEdit" name="entrada_correo">
-             <property name="placeholderText"><string>u12345678@upc.edu.pe</string></property>
+             <property name="placeholderText"><string>ejemplo@unicesar.edu.co</string></property>
              <property name="frame"><bool>false</bool></property>
             </widget>
            </item>
@@ -112,7 +112,7 @@
         </item>
         <item>
          <widget class="QFrame" name="frame_input_clave">
-          <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+          <property name="minimumSize"><size><width>0</width><height>42</height></size></property>
           <layout class="QHBoxLayout">
            <property name="margin"><number>0</number></property>
            <property name="spacing"><number>5</number></property>
@@ -143,20 +143,83 @@
        </layout>
       </item>
       
+      <!-- Enlace Recuperar Contraseña -->
+      <item>
+       <layout class="QHBoxLayout" name="layout_olvido">
+        <item>
+         <spacer name="spacer_olvido">
+          <property name="orientation"><enum>Qt::Horizontal</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>40</width><height>10</height></size></property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="boton_olvido_clave">
+          <property name="font"><font><family>Segoe UI</family><pointsize>8</pointsize></font></property>
+          <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          <property name="text"><string>¿Olvidaste tu contraseña?</string></property>
+          <property name="styleSheet"><string>border: none; background: transparent; color: #555555; text-decoration: underline; padding: 2px;</string></property>
+          <property name="flat"><bool>true</bool></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
       <item>
        <spacer name="spacer_boton">
         <property name="orientation"><enum>Qt::Vertical</enum></property>
-        <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+        <property name="sizeHint" stdset="0"><size><width>20</width><height>10</height></size></property>
+       </spacer>
+      </item>
+      
+      <!-- Aceptación y Enlace Política de Datos Ley 1581 (Alineados horizontalmente) -->
+      <item>
+       <layout class="QHBoxLayout" name="layout_politica_login">
+        <property name="spacing"><number>4</number></property>
+        <property name="alignment"><set>Qt::AlignCenter</set></property>
+        <item>
+         <widget class="QCheckBox" name="check_politica_login">
+          <property name="text"><string>Acepto la</string></property>
+          <property name="font"><font><family>Segoe UI</family><pointsize>8</pointsize></font></property>
+          <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          <property name="styleSheet"><string>QCheckBox { color: #4A5568; spacing: 5px; }</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="boton_politica_datos">
+          <property name="font"><font><family>Segoe UI</family><pointsize>8</pointsize><bold>true</bold><underline>true</underline></font></property>
+          <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          <property name="text"><string>Política de Protección de Datos (Ley 1581)</string></property>
+          <property name="styleSheet"><string>border: none; background: transparent; color: #196F3D; padding: 0px; text-align: left;</string></property>
+          <property name="flat"><bool>true</bool></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+
+      <item>
+       <spacer name="spacer_boton_2">
+        <property name="orientation"><enum>Qt::Vertical</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>20</width><height>8</height></size></property>
        </spacer>
       </item>
       
       <!-- Boton Ingresar -->
       <item>
        <widget class="QPushButton" name="boton_ingresar">
-        <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+        <property name="minimumSize"><size><width>0</width><height>46</height></size></property>
         <property name="font"><font><family>Segoe UI</family><pointsize>10</pointsize><bold>true</bold></font></property>
         <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
         <property name="text"><string>Iniciar Sesión</string></property>
+       </widget>
+      </item>
+
+      <!-- Enlace Registrarse como Estudiante -->
+      <item>
+       <widget class="QPushButton" name="boton_registro_estudiante">
+        <property name="font"><font><family>Segoe UI</family><pointsize>9</pointsize><bold>true</bold></font></property>
+        <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+        <property name="text"><string>¿Eres nuevo estudiante? Regístrate aquí</string></property>
+        <property name="styleSheet"><string>border: none; background: transparent; color: #196F3D; padding: 4px; text-decoration: underline;</string></property>
+        <property name="flat"><bool>true</bool></property>
        </widget>
       </item>
       
