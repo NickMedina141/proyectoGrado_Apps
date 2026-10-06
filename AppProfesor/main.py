@@ -32,14 +32,21 @@ if __name__ == '__main__':
     from PyQt6.QtWidgets import QApplication
     from PyQt6.QtGui import QIcon
     from vista.ventana_login import VentanaLogin
-    from utils.actualizador import sincronizar_parches
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        from utils.actualizador import sincronizar_parches
+        if sincronizar_parches("AppProfesor", base_dir):
+            import subprocess
+            subprocess.Popen([sys.executable, os.path.join(base_dir, "main.py")] + sys.argv[1:])
+            sys.exit(0)
+    except Exception as e:
+        print(f"[ACTUALIZADOR] Error comprobando parches: {e}")
 
     aplicacion = QApplication(sys.argv)
     aplicacion.setApplicationName("UPC Proctor")
     aplicacion.setApplicationDisplayName("")
 
     # Configuración de ícono institucional UPC
-    base_dir = os.path.dirname(os.path.abspath(__file__))
     ruta_ico = os.path.join(base_dir, "recursos", "installer_icon.ico")
     ruta_png = os.path.join(base_dir, "vista", "recursos", "logo_upc.png")
     ruta_icono = ruta_ico if os.path.exists(ruta_ico) else ruta_png

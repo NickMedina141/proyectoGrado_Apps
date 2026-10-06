@@ -55,12 +55,13 @@ def sincronizar_parches(nombre_app, base_path):
         if tag_remoto == tag_local:
             return False
 
-        # Buscar el archivo ZIP correspondiente a esta app (ej: 'AppProfesor_patch.zip')
+        # Buscar el archivo ZIP correspondiente a esta app
         assets = datos_release.get("assets", [])
         asset_encontrado = None
+        claves = ["appprofesor", "paneldocente", "profesor"] if any(k in nombre_app.lower() for k in ["profesor", "panel", "docente"]) else ["appsupervision", "supervisionupc", "estudiante"]
         for asset in assets:
             nombre_asset = asset.get("name", "").lower()
-            if nombre_app.lower() in nombre_asset and nombre_asset.endswith(".zip"):
+            if any(c in nombre_asset for c in claves) and nombre_asset.endswith(".zip"):
                 asset_encontrado = asset
                 break
 
@@ -81,7 +82,6 @@ def sincronizar_parches(nombre_app, base_path):
 
         # Descomprimir los archivos actualizados en la raíz de la app
         with zipfile.ZipFile(ruta_temporal, "r") as zip_ref:
-            # Lista de carpetas y archivos seguros a actualizar
             carpetas_permitidas = ("api", "config", "utils", "vista", "recursos", "main.py", "requerimientos.txt", "requirements.txt")
             for miembro in zip_ref.namelist():
                 if any(miembro.startswith(c) for c in carpetas_permitidas):
@@ -92,8 +92,23 @@ def sincronizar_parches(nombre_app, base_path):
         except Exception:
             pass
 
-        # Actualizar el registro del tag local sin cambiar la 'version': '1.0'
+        # Instalar silenciosamente si hay nuevas librerías en requerimientos
+        req_arch = "requerimientos.txt" if any(k in nombre_app.lower() for k in ["profesor", "panel", "docente"]) else "requirements.txt"
+        req_path = os.path.join(base_path, req_arch)
+        if os.path.exists(req_path):
+            try:
+                import subprocess
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "--prefer-binary", "-r", req_path, "--quiet"],
+                    cwd=base_path,
+                    timeout=90
+                )
+            except Exception as e:
+                print(f"[ACTUALIZADOR] Error actualizando librerías: {e}")
+
+        # Actualizar el registro del tag local
         config_local["tag"] = tag_remoto
+        config_local["version"] = tag_remoto.lstrip("v")
         _guardar_config_local(base_path, config_local)
 
         print("[ACTUALIZADOR] Parche aplicado exitosamente.")

@@ -40,11 +40,16 @@ if sys.platform == "win32":
 # Asegurar que los imports relativos funcionen correctamente
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Sincronización silenciosa de parches desde GitHub Releases (DESACTIVADA PARA DESARROLLO LOCAL)
-# from utils.actualizador import sincronizar_parches
-# base_dir = os.path.dirname(os.path.abspath(__file__))
-# if sincronizar_parches("AppSupervision", base_dir):
-#     os.execl(sys.executable, sys.executable, *sys.argv)
+# Sincronización silenciosa de parches desde GitHub Releases
+try:
+    from utils.actualizador import sincronizar_parches
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    if sincronizar_parches("AppSupervision", base_dir):
+        import subprocess
+        subprocess.Popen([sys.executable, os.path.join(base_dir, "main.py")] + sys.argv[1:])
+        sys.exit(0)
+except Exception as e:
+    print(f"[ACTUALIZADOR] Error comprobando parches: {e}")
 
 # FIX CRÍTICO: QtWebEngine requiere ser importado ANTES de crear QApplication
 try:
